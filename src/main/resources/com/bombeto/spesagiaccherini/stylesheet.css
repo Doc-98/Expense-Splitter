@@ -1,0 +1,9 @@
+.root{
+    -fx-font-size: 15;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+.button:focused {
+    -fx-border-color: rgba(131, 189, 129, 0.9);
+    -fx-border-width: 1px;
+}

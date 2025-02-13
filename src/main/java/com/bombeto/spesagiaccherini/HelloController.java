@@ -1,4 +1,4 @@
-package com.bombeto.spesagiaccherini.demo;
+package com.bombeto.spesagiaccherini;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;

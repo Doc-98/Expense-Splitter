@@ -1,25 +1,27 @@
-package com.bombeto.spesagiaccherini.demo;
+package com.bombeto.spesagiaccherini;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
+import java.util.Objects;
+
 public class Testing extends Application {
     
-    @SuppressWarnings("DataFlowIssue")
     @Override
     public void start(Stage stage) throws Exception {
         
-//        Parent root = FXMLLoader.load(getClass().getClassLoader().getResource("./demo-root.fxml"));
-//        Scene scene = new Scene(root, Color.AQUA);
-//
-        FXMLLoader fxmlLoader = new FXMLLoader(Testing.class.getClassLoader().getResource("/demo-root.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 800, 600);
-
-        Image icon = new Image("./icon.png");
+        FXMLLoader loader = new FXMLLoader(Testing.class.getResource("demo-root.fxml"));
+        Parent root = loader.load();
+        Controller controller = loader.getController();
+        controller.setStage(stage);
+        Scene scene = new Scene(root, 2000, 1000);
+        scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("stylesheet.css")).toExternalForm());
         
+        Image icon = new Image(Objects.requireNonNull(Testing.class.getResource("media/icon.png")).toURI().toString());
         stage.getIcons().add(icon);
         stage.setTitle("La Spesa Giacchevini");
         stage.setScene(scene);
