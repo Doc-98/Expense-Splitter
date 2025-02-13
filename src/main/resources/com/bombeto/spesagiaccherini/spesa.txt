@@ -1,0 +1,37 @@
+P 4X66 COCA COLA             E    3,99  
+P 4X66 COCA COLA             E    3,99  
+P U! SCAM. AFFUM.FETTE       A    1,59  
+INIZIO SCONTRINO BILANCIA               
+P  PR.PARMA C/O DOP 16M      B    8,40  
+ARTICOLI: 1                             
+NUMERO: 1940670008403                   
+FINE SCONTRINO BILANCIA                 
+CAMPARI 70CL                 E   12,99  
+GHIACCIO CUBET.G.FA          E    1,99  
+CECI VG BIO                  B    0,89  
+GINGER G250                  B    1,99  
+TONICA KINLEY 1LT            E    1,19  
+REPARTO ORTOFRUTTA           A    2,20  
+P TAV.LATTE CAR.VG100G       B    2,19  
+  SCONTO ARTICOLI 15%            -0,33-S
+ P TAV.FOND.55% LAMPONE       B    1,99  
+  SCONTO ARTICOLI 15%            -0,30-S
+ P MONSTER MANGO LOCO         E    1,25  
+2-MAXI ROT. C.CASA U         E    1,99  
+MACIN SCELTISSIMA BA         B    6,09  
+MACINATA MAGRA B.A.          B    4,39  
+CECI VG BIO                  B    0,89  
+P CAMOMIL.14F.FILT.BON       E    2,79  
+P CIOC. NOCCIOLE INTER       B    1,49  
+CETRIOLINI ACETO U!          B    1,49  
+NOCE MOSCATA INTERA          B    1,99  
+SALSA BARBECUE HEINZ         B    2,99  
+SENAPE  TWISTER U!           B    1,55  
+LATTUGA ROMANA AL KG         A    1,12  
+SACCHETTO MATER-B            E    0,02  
+PANE PER HAMBURGER           B    1,69  
+CIPOLLE DORATE KG 1          A    1,49  
+CIOC.MODICA VG 100G          B    1,99  
+3  PIADINA BIO  VG           A    2,29  
+P U! SCAM. AFFUM.FETTE       A    1,59  
+P BACON AFFUMICATO           B    1,99 
