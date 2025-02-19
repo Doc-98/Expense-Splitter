@@ -1,19 +1,32 @@
 package com.bombeto.spesagiaccherini;
 
 import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Group;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.converter.FloatStringConverter;
 import javafx.util.converter.IntegerStringConverter;
@@ -21,8 +34,14 @@ import javafx.util.converter.IntegerStringConverter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
+
+import static com.bombeto.spesagiaccherini.Testing.aboutIcon;
+import static com.bombeto.spesagiaccherini.Testing.appIcon;
 
 public class Controller {
     
@@ -37,6 +56,10 @@ public class Controller {
     AnchorPane pane;
     @FXML
     BorderPane totalsPane;
+    @FXML
+    Group addNewItemGroup;
+    @FXML
+    TextField newItemName, newItemPrice, newItemQuantity, newItemBuyers;
     
     private double zoomFactor = 1.0;
     private int scrollIndex = 0;
@@ -48,7 +71,7 @@ public class Controller {
         
         populate();
         
-        //Zoom feature and scroll feature
+        // Zoom feature and scroll feature
         table.addEventFilter(ScrollEvent.SCROLL, event -> {
             if(event.isControlDown()) {
                 double delta = event.getDeltaY() > 0 ? 1.1 : 0.9;
@@ -83,16 +106,31 @@ public class Controller {
                 table.scrollTo(scrollIndex);
             }
         });
-        
-//        table.getColumns().get(2).setOnEditCommit(event -> {
-//
-//        });
+
+        // Remove a selected row by pressing delete
+        table.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            KeyCode keyCode = event.getCode();
+            if(keyCode == KeyCode.DELETE) {
+                removeRow();
+                event.consume();
+            }
+        });
+
+        // Add new item by pressing ENTER while in text fields
+        addNewItemGroup.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            // addNewItem() already ignores cases with empty names, however this is left here as an additional safety net
+            if(event.getCode() == KeyCode.ENTER && !newItemName.getText().isEmpty()) {
+                addNewItem();
+                event.consume();
+            }
+        });
     }
     
     @FXML
     private void openNewFile() throws IOException {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Resource File");
+        fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Text Files", "*.txt"),
                 new FileChooser.ExtensionFilter("All files", "*.*")
@@ -115,7 +153,7 @@ public class Controller {
     }
     
     @FXML
-    private void calculate() {
+    private void calculate() throws URISyntaxException {
         int n;
         List<ShopItem> items = table.getItems();
         TreeMap<String, Float> theCheck = new TreeMap<String, Float>();
@@ -127,6 +165,8 @@ public class Controller {
         }
         
         Stage newStage = new Stage();
+        newStage.setTitle("Totali");
+        newStage.getIcons().add(appIcon);
         Label totLabel = new Label();
         totalsPane = new BorderPane();
         
@@ -135,6 +175,112 @@ public class Controller {
         
         Scene scene = new Scene(totalsPane, 300, 300);
         newStage.setScene(scene);
+        newStage.show();
+    }
+
+    @FXML
+    private void setupCheckCompilation() throws IOException {
+        Stage compilatioStage = new Stage();
+        compilatioStage.setTitle("La Spesa Giaccherini - Compilazione Ricevuta");
+        compilatioStage.getIcons().add(appIcon);
+        compilatioStage.setResizable(false);
+        compilatioStage.initOwner(stage);
+
+        Stage confirmationStage = new Stage();
+        confirmationStage.setTitle("Attenzione");
+        confirmationStage.getIcons().add(appIcon);
+        confirmationStage.setResizable(false);
+        confirmationStage.initOwner(compilatioStage);
+
+        FXMLLoader loader = new FXMLLoader(Testing.class.getResource("checkcomp-root.fxml"));
+        CheckCompController compController = new CheckCompController(table, compilatioStage, confirmationStage);
+        loader.setController(compController);
+        Parent compilationRoot = loader.load();
+        loader = new FXMLLoader(Testing.class.getResource("confirm-elim-root.fxml"));
+        loader.setController(compController);
+        Parent confirmRoot = loader.load();
+
+
+
+        Scene compilationScene = new Scene(compilationRoot);
+        Scene confirmationScene = new Scene(confirmRoot);
+
+        confirmationStage.setScene(confirmationScene);
+        confirmationStage.initModality(Modality.WINDOW_MODAL);
+
+        compilatioStage.setScene(compilationScene);
+        compilatioStage.initModality(Modality.WINDOW_MODAL);
+
+        compilatioStage.showAndWait();
+    }
+
+    @FXML
+    private void addNewItem() {
+
+        String name = newItemName.getText();
+        if(name.isEmpty()) return;
+
+        Optional<String> temp = newItemPrice.getText().isEmpty() ? Optional.empty() : Optional.of(newItemPrice.getText());
+        float price = Float.parseFloat(temp.orElse("0"));
+
+        temp = newItemQuantity.getText().isEmpty() ? Optional.empty() : Optional.of(newItemQuantity.getText());
+        int quantity = Integer.parseInt(temp.orElse("1"));
+
+        String buyers = newItemBuyers.getText();
+
+        System.out.println(name + " " + price + " " + quantity + " " + buyers);
+
+        ShopItem item = new ShopItem(name, price, quantity);
+        item.setBuyers(buyers);
+
+        newItemName.clear();
+        newItemPrice.clear();
+        newItemQuantity.clear();
+        newItemBuyers.clear();
+
+        ObservableList<ShopItem> items = table.getItems();
+        int index = items.indexOf(item);
+        if(index != -1) {
+            items.get(index).mergeEquals(item);
+        }else items.add(item);
+        table.refresh();
+    }
+
+    @FXML
+    private void removeRow() {
+        int tableIndex = table.getSelectionModel().getSelectedIndex();
+        if(tableIndex != -1) {
+            table.getItems().remove(tableIndex);
+            table.refresh();
+        }
+    }
+
+    @FXML
+    private void about() throws URISyntaxException {
+        Stage newStage = new Stage();
+        newStage.initOwner(stage);
+        newStage.setTitle("About");
+        newStage.getIcons().add(appIcon);
+        Label aboutLabel = new Label();
+        VBox vBox = new VBox();
+
+        aboutLabel.setText("Questo programma é stato offerto da\n'Rimembranze S.r.l.'");
+        aboutLabel.setAlignment(Pos.CENTER);
+        aboutLabel.setStyle("-fx-text-alignment: center");
+
+        ImageView imageView = new ImageView(aboutIcon);
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(300);
+
+        vBox.getChildren().add(aboutLabel);
+        vBox.getChildren().add(imageView);
+        vBox.setAlignment(Pos.CENTER);
+        vBox.setSpacing(25);
+        vBox.setPadding(new Insets(15, 30, 30, 30));
+
+        Scene scene = new Scene(vBox);
+        newStage.setScene(scene);
+        newStage.initModality(Modality.WINDOW_MODAL);
         newStage.show();
     }
     
@@ -174,18 +320,6 @@ public class Controller {
         }
     }
     
-    @FXML
-    private void addEmptyRow() {
-        ShopItem item = new ShopItem();
-        table.getItems().add(item);
-    }
-    
-    @FXML
-    private void removeRow() {
-        table.getItems().remove(table.getSelectionModel().getSelectedIndex());
-        table.refresh();
-    }
-    
     private int getVisibleRow(int scrollIndex) {
         // Get the TableView's skin
         TableViewSkin<?> skin = (TableViewSkin<?>) table.getSkin();
@@ -204,7 +338,7 @@ public class Controller {
         if(scrollIndex == -2) return virtualFlow.getLastVisibleCell().getIndex();
         else return -1;
     }
-    
+
     private void setup() {
         
         //Set up the table

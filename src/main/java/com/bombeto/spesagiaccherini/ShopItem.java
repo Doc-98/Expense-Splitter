@@ -79,6 +79,7 @@ public class ShopItem {
                 }
             }
         }
+        this.getBuyers().sort(String::compareTo);
     }
     
     public void setPrice(float price) {
@@ -100,6 +101,18 @@ public class ShopItem {
     public void addToCost(float f) {
         this.price += f;
     }
+
+    public void mergeEquals(ShopItem other) {
+        if(!this.itemName.equals(other.itemName)) throw new AssertionError("Names Mismatch");
+        if(this.price/this.amount != other.price/other.amount) throw new AssertionError("Price Mismatch");
+
+        this.setAmount(this.amount + other.getAmount());
+        String this_Buyers = this.getBuyersString();
+        String other_Buyers = other.getBuyersString();
+        if(!this_Buyers.equals(other_Buyers)) {
+            this.setBuyers(this_Buyers + " " + other_Buyers);
+        }
+    }
     
     public boolean equals(ShopItem item2) {
         return this.itemName.equals(item2.getItemName()) && this.price == item2.getPrice();
@@ -118,12 +131,20 @@ public class ShopItem {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(amount + " - " + itemName + " -> " + String.format("%.2f", price) + "€");
-        if(buyers != null) {
+        if(!buyers.isEmpty()) {
             sb.append("\n\nComprato da: ");
             for(String buyer : buyers) {
                 sb.append(buyer + " ");
             }
         }
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof ShopItem other) {
+            return this.itemName.equals(other.getItemName()) && this.price / this.amount == other.getPrice() / other.getAmount();
+        }
+        return false;
     }
 }
