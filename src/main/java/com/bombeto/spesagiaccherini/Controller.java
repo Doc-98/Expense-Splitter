@@ -30,18 +30,14 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.converter.FloatStringConverter;
 import javafx.util.converter.IntegerStringConverter;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
-
-import static com.bombeto.spesagiaccherini.Testing.aboutIcon;
-import static com.bombeto.spesagiaccherini.Testing.appIcon;
 
 public class Controller {
     
@@ -49,6 +45,8 @@ public class Controller {
     public void setStage(Stage stage) {
         this.stage = stage;
     }
+    public Image appIcon = new Image(Objects.requireNonNull(Testing.class.getResource("media/cg_logo_2.png")).toString());
+    public Image aboutIcon = new Image(Objects.requireNonNull(Testing.class.getResource("media/cg_logo_1.png")).toString());
     
     @FXML
     TableView<ShopItem> table;
@@ -67,7 +65,9 @@ public class Controller {
     @FXML
     private void initialize() throws IOException {
         
-        setup();
+        
+        
+        tableSetup();
         
         populate();
         
@@ -153,10 +153,10 @@ public class Controller {
     }
     
     @FXML
-    private void calculate() throws URISyntaxException {
+    private void calculate() {
         int n;
         List<ShopItem> items = table.getItems();
-        TreeMap<String, Float> theCheck = new TreeMap<String, Float>();
+        TreeMap<String, Float> theCheck = new TreeMap<>();
         for(ShopItem item : items) {
             n = item.getBuyers().size();
             for(String buyer : item.getBuyers()) {
@@ -192,11 +192,11 @@ public class Controller {
         confirmationStage.setResizable(false);
         confirmationStage.initOwner(compilatioStage);
 
-        FXMLLoader loader = new FXMLLoader(Testing.class.getResource("checkcomp-root.fxml"));
+        FXMLLoader loader = new FXMLLoader(new URL("file:C:\\Users\\dvinc\\IdeaProjects\\SpesaGiaccherini\\target\\classes\\com\\bombeto\\spesagiaccherini\\checkcomp-root.fxml"));
         CheckCompController compController = new CheckCompController(table, compilatioStage, confirmationStage);
         loader.setController(compController);
         Parent compilationRoot = loader.load();
-        loader = new FXMLLoader(Testing.class.getResource("confirm-elim-root.fxml"));
+        loader = new FXMLLoader(new URL("file:C:\\Users\\dvinc\\IdeaProjects\\SpesaGiaccherini\\target\\classes\\com\\bombeto\\spesagiaccherini\\confirm-elim-root.fxml"));
         loader.setController(compController);
         Parent confirmRoot = loader.load();
 
@@ -256,7 +256,7 @@ public class Controller {
     }
 
     @FXML
-    private void about() throws URISyntaxException {
+    private void about() {
         Stage newStage = new Stage();
         newStage.initOwner(stage);
         newStage.setTitle("About");
@@ -339,7 +339,7 @@ public class Controller {
         else return -1;
     }
 
-    private void setup() {
+    private void tableSetup() {
         
         //Set up the table
         
