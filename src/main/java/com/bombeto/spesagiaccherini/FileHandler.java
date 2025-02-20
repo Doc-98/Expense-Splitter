@@ -18,12 +18,17 @@ public class FileHandler {
     
     public FileHandler() throws FileNotFoundException {
         in = new File(Objects.requireNonNull(FileHandler.class.getResource("spesa.txt")).getFile());
-        if(!in.exists()) throw new RuntimeException("\n\nError: No input file found\n\n");
+
+        InputStream inputStream = Objects.requireNonNull(
+                FileHandler.class.getResourceAsStream("spesa.txt"),
+                "\n\nError: No input file found\n\n"
+        );
+        reader = new BufferedReader(new InputStreamReader(inputStream));
         out = new File("out_0.txt");
-        for(int i = 1; out.exists(); i++){
-            out = new File("out_"+i+".txt");
+        for (int i = 1; out.exists(); i++) {
+            out = new File("out_" + i + ".txt");
         }
-        reader = new BufferedReader(new FileReader(in));
+
     }
     
     public FileHandler(File selectedFile) throws FileNotFoundException {
