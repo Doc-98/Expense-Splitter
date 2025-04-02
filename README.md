@@ -1,5 +1,10 @@
 # 🛒 Expense Splitter  
 
+Have you ever found yourself painstakingly dividing each item in a receipt between the people of your household? Because me and my friends have.
+I know this is probably an issue more prominent in students that live together and go grocery shopping together, but no one is stopping you from using this when you go on a trip or any kind of vacation and maybe someone picks up a tab for everyone, just to speed things up, with the intention to split the tab later.
+
+Whichever the case, this program is thought with the primary intention to speed that process along and automate it as much as I can.
+
 ## 📌 Overview  
 This repository serves multiple purposes:  
 - It helps me learn more about Git by actively using it.  
