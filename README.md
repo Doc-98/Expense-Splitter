@@ -1,9 +1,12 @@
 # 🛒 Expense Splitter  
 
 Have you ever found yourself painstakingly dividing each item in a receipt between the people of your household? Because me and my friends have.
-I know this is probably an issue more prominent in students that live together and go grocery shopping together, but no one is stopping you from using this when you go on a trip or any kind of vacation and maybe someone picks up a tab for everyone, just to speed things up, with the intention to split the tab later.
 
-Whichever the case, this program is thought with the primary intention to speed that process along and automate it as much as I can.
+I know this is probably an issue more prominent in students that live together and go grocery shopping together, but no one is stopping you from using this when you go on a trip or any kind of vacation and maybe someone picks up a tab for everyone, just to speed things up, with the intention to split the tab later. Or maybe you decide to rent some quads on the beach, but they only accept cash, so your friend fronts the money for everyone.
+
+Just imagine that at the end of the trip you end up with a bunch of expenses and receipt that need to be properly divided between all the partecipants. That is in not equal parts, otherwise we wouldn't be having this conversation I hope.
+
+Whichever the case, this program is born with the primary intention to speed that process along and automate it as much possible.
 
 ## 📌 Overview  
 This repository serves multiple purposes:  
