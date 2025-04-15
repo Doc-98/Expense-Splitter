@@ -16,7 +16,7 @@ public class FileHandler {
     BufferedReader reader;
     String regex;
     
-    public FileHandler() throws FileNotFoundException {
+    public FileHandler() {
         in = new File(Objects.requireNonNull(FileHandler.class.getResource("spesa.txt")).getFile());
 
         InputStream inputStream = Objects.requireNonNull(
@@ -41,24 +41,34 @@ public class FileHandler {
         reader = new BufferedReader(new FileReader(in));
     }
     
+    public FileHandler(String str) {
+        in = null;
+        out = new File("out_0.txt");
+        for(int i = 1; out.exists(); i++){
+            out = new File("out_"+i+".txt");
+        }
+        reader = new BufferedReader(new StringReader(str));
+    }
+    
     public List<ShopItem> getReceiptList_UNES() throws IOException {
         
         List<ShopItem> list = new ArrayList<>();
         ShopItem item;
-        String line = reader.readLine();
+        String line = reader.readLine().replace("\u00A0", " ");
         float f;
         
         while(line != null) {
             item = getNewEntry_UNES(line);
             line = reader.readLine();
+            if(line != null) line = line.replace("\u00A0", " ").trim();
             f = checkSale_UNES(line);
             if(item != null) {
-                if(f != 0) item.addToCost(f);
+                if(f != 0) item.addToTotalPrice(f);
                 list.add(item);
             }
-            
         }
         mergeDuplicates(list);
+        reader.close();
         return list;
     }
     
@@ -70,6 +80,25 @@ public class FileHandler {
         while((item = getNewEntry_EVERLI()) != null) {
             list.add(item);
         }
+        reader.close();
+        return list;
+    }
+    
+    public List<ShopItem> getReceiptList_DELIVEROO() throws IOException {
+        
+        List<ShopItem> list = new ArrayList<>();
+        ShopItem item;
+        String str = reader.readLine();
+        
+        while(str != null && !str.equals("Quantity Item Total")) {
+            str = reader.readLine();
+        }
+        
+        while((item = getNewEntry_DELIVEROO()) != null) {
+            if(item.getPrice() != 0) list.add(item);
+        }
+        
+        reader.close();
         return list;
     }
     
@@ -112,7 +141,7 @@ public class FileHandler {
             price = price.replace(",", ".");
             return new ShopItem(name.strip(), Float.parseFloat(price));
         }
-        else throw new RuntimeException("\n\nError: MissMatch\n\n");
+        else throw new RuntimeException("\n\nError: Matcher Error--\n\n");
     }
     
     private float checkSale_UNES(String line) {
@@ -148,7 +177,7 @@ public class FileHandler {
         
         if(matcher.find()) {
             amount = Integer.parseInt(matcher.group(1));
-            itemName = matcher.group(3);
+            itemName = matcher.group(3).toUpperCase();
         } else throw new RuntimeException("\n\nError: MissMatch\n\n");
         
         while(!line.matches(priceRegex)) {
@@ -165,7 +194,30 @@ public class FileHandler {
         
         line = line.replaceFirst("( €)", "");
         line = line.replaceFirst(",", ".");
-        return new ShopItem(itemName, Float.parseFloat(line), amount);
+        return new ShopItem(itemName, Float.parseFloat(line), amount, true);
+    }
+    
+    private ShopItem getNewEntry_DELIVEROO() throws IOException {
+        
+        regex = "(\\d)?(.\\d)?(.+)€(\\d{1,2}(,|[.])\\d{1,2})$";
+        String line = reader.readLine();
+        if(line.contains("subtotal")) line = reader.readLine();
+        
+        int amount = 1;
+        float cost;
+        
+        if(line == null || line.contains("Total")) return null;
+        
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(line);
+        
+        if(matcher.find()) {
+            
+            if(matcher.group(1) != null) amount = Integer.parseInt(matcher.group(1));
+            cost = Float.parseFloat(matcher.group(4));
+            
+            return new ShopItem(matcher.group(3).trim().toUpperCase(), cost, amount, true);
+        } else throw new RuntimeException("\n\nError: MissMatch -> " + line + "\n\n");
     }
     
     public void mergeDuplicates(List<ShopItem> list) {

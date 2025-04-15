@@ -1,7 +1,7 @@
 module com.bombeto.spesagiaccherini {
-    requires javafx.controls;
     requires javafx.fxml;
-    requires java.desktop;
+    requires org.apache.pdfbox;
+    requires org.controlsfx.controls;
     
     
     opens com.bombeto.spesagiaccherini to javafx.fxml;

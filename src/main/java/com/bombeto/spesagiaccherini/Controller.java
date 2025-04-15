@@ -6,7 +6,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -22,22 +21,22 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.converter.FloatStringConverter;
 import javafx.util.converter.IntegerStringConverter;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.controlsfx.control.ToggleSwitch;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.nio.file.Files;
+import java.util.*;
 
 public class Controller {
     
@@ -51,21 +50,19 @@ public class Controller {
     @FXML
     TableView<ShopItem> table;
     @FXML
-    AnchorPane pane;
-    @FXML
     BorderPane totalsPane;
     @FXML
-    Group addNewItemGroup;
+    HBox addNewItemBox;
     @FXML
     TextField newItemName, newItemPrice, newItemQuantity, newItemBuyers;
+    @FXML
+    ToggleSwitch priceTypeToggle;
     
     private double zoomFactor = 1.0;
     private int scrollIndex = 0;
     
     @FXML
     private void initialize() throws IOException {
-        
-        
         
         tableSetup();
         
@@ -117,29 +114,42 @@ public class Controller {
         });
 
         // Add new item by pressing ENTER while in text fields
-        addNewItemGroup.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+        addNewItemBox.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             // addNewItem() already ignores cases with empty names, however this is left here as an additional safety net
             if(event.getCode() == KeyCode.ENTER && !newItemName.getText().isEmpty()) {
                 addNewItem();
                 event.consume();
             }
         });
+        
+        priceTypeToggle.setOnMouseReleased(_ -> {
+            if(priceTypeToggle.isSelected()) newItemPrice.setPromptText("Prezzo Totale");
+            else newItemPrice.setPromptText("Prezzo Unitario");
+        });
     }
     
-    @FXML
-    private void openNewFile() throws IOException {
+    File openFile() throws IOException {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Resource File");
         fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Text Files", "*.txt"),
+                new FileChooser.ExtensionFilter("PDF files", "*.pdf"),
                 new FileChooser.ExtensionFilter("All files", "*.*")
         );
         File selectedFile = fileChooser.showOpenDialog(stage);
-        if (selectedFile != null) {
-            table.getItems().clear();
-            populate(selectedFile);
-        } else throw new FileNotFoundException();
+        
+        return selectedFile;
+    }
+    
+    @FXML
+    private void addNewFile() throws IOException {
+        populate(openFile());
+    }
+    
+    @FXML void cleanAddNewFile() throws IOException {
+        table.getItems().clear();
+        populate(openFile());
     }
     
     @FXML
@@ -152,15 +162,72 @@ public class Controller {
         Platform.exit();
     }
     
+//    -- LEGACY --
+//    @FXML
+//    private void calculate() {
+//        int n;
+//        List<ShopItem> items = table.getItems();
+//        TreeMap<String, Float> theCheck = new TreeMap<>();
+//        for(ShopItem item : items) {
+//            n = item.getBuyers().size();
+//            for(String buyer : item.getBuyers()) {
+//                addEntry(theCheck, buyer, item.getTotalPrice()/n);
+//            }
+//        }
+//
+//        Stage newStage = new Stage();
+//        newStage.setTitle("Totali");
+//        newStage.getIcons().add(appIcon);
+//        Label totLabel = new Label();
+//        totalsPane = new BorderPane();
+//
+//        totLabel.setText(printTheCheck(theCheck));
+//        totalsPane.setCenter(totLabel);
+//
+//        Scene scene = new Scene(totalsPane, 300, 300);
+//        newStage.setScene(scene);
+//        newStage.show();
+//    }
+    
     @FXML
     private void calculate() {
-        int n;
-        List<ShopItem> items = table.getItems();
+        
+        int currMin = 1;
+        float tempCost;
+        
+        List<ShopItem> tempItems = new ArrayList<>();
+        table.getItems().forEach(tableItem -> tempItems.add(new ShopItem(tableItem)));
         TreeMap<String, Float> theCheck = new TreeMap<>();
-        for(ShopItem item : items) {
-            n = item.getBuyers().size();
-            for(String buyer : item.getBuyers()) {
-                addEntry(theCheck, buyer, item.getPrice()/n);
+        List<String> minBuyersTemp = new ArrayList<>();
+        Map<String, Integer> currentItemBuyersMap;
+        
+        for (ShopItem item : tempItems) {
+            currentItemBuyersMap = item.getBuyersMap();
+            while(item.getAmount() != 0) {
+                // We save all the buyers that bought the least amount of this item
+                for (Map.Entry<String, Integer> entry : currentItemBuyersMap.entrySet()) {
+                    if (entry.getValue() < currMin) {
+                        currMin = entry.getValue();
+                        minBuyersTemp.clear();
+                        minBuyersTemp.add(entry.getKey());
+                    } else if (entry.getValue() == currMin) {
+                        minBuyersTemp.add(entry.getKey());
+                    }
+                }
+                
+                item.setAmount(item.getAmount() - currMin);
+                tempCost = (item.getPrice() * currMin) / currentItemBuyersMap.size();
+                for(String buyer : item.getBuyers()) { // loop for all the buyers of the item
+                    addEntry(theCheck, buyer, tempCost); // add to the check
+                    if(minBuyersTemp.contains(buyer)) { // if the current one is in our temp list
+                        // remove from both lists, we calculated his share and don't need it no more
+                        minBuyersTemp.remove(buyer);
+                        currentItemBuyersMap.remove(buyer);
+                    } else {
+                        currentItemBuyersMap.merge(buyer, -currMin, Integer::sum);
+                    }
+                }
+                currMin = 1;
             }
         }
         
@@ -180,6 +247,7 @@ public class Controller {
 
     @FXML
     private void setupCheckCompilation() throws IOException {
+        if (table.getItems().isEmpty()) return;
         Stage compilatioStage = new Stage();
         compilatioStage.setTitle("La Spesa Giaccherini - Compilazione Ricevuta");
         compilatioStage.getIcons().add(appIcon);
@@ -193,7 +261,7 @@ public class Controller {
         confirmationStage.initOwner(compilatioStage);
 
         FXMLLoader loader = new FXMLLoader(new URL("file:C:\\Users\\dvinc\\IdeaProjects\\SpesaGiaccherini\\target\\classes\\com\\bombeto\\spesagiaccherini\\checkcomp-root.fxml"));
-        CheckCompController compController = new CheckCompController(table, compilatioStage, confirmationStage);
+        CompilationController compController = new CompilationController(table, compilatioStage, confirmationStage);
         loader.setController(compController);
         Parent compilationRoot = loader.load();
         loader = new FXMLLoader(new URL("file:C:\\Users\\dvinc\\IdeaProjects\\SpesaGiaccherini\\target\\classes\\com\\bombeto\\spesagiaccherini\\confirm-elim-root.fxml"));
@@ -204,12 +272,12 @@ public class Controller {
 
         Scene compilationScene = new Scene(compilationRoot);
         Scene confirmationScene = new Scene(confirmRoot);
-
-        confirmationStage.setScene(confirmationScene);
-        confirmationStage.initModality(Modality.WINDOW_MODAL);
-
+        
         compilatioStage.setScene(compilationScene);
         compilatioStage.initModality(Modality.WINDOW_MODAL);
+        
+        confirmationStage.setScene(confirmationScene);
+        confirmationStage.initModality(Modality.WINDOW_MODAL);
 
         compilatioStage.showAndWait();
     }
@@ -219,18 +287,22 @@ public class Controller {
 
         String name = newItemName.getText();
         if(name.isEmpty()) return;
-
+        
         Optional<String> temp = newItemPrice.getText().isEmpty() ? Optional.empty() : Optional.of(newItemPrice.getText());
-        float price = Float.parseFloat(temp.orElse("0"));
+        float price = temp.map(s -> Float.parseFloat(s.replace(",", "."))).orElse(0F);
 
         temp = newItemQuantity.getText().isEmpty() ? Optional.empty() : Optional.of(newItemQuantity.getText());
         int quantity = Integer.parseInt(temp.orElse("1"));
-
+        
         String buyers = newItemBuyers.getText();
 
-        System.out.println(name + " " + price + " " + quantity + " " + buyers);
-
-        ShopItem item = new ShopItem(name, price, quantity);
+        //System.out.println(name + " " + price + " " + quantity + " " + buyers);
+        
+        ShopItem item;
+        
+        if(priceTypeToggle.isSelected())item = new ShopItem(name, price, quantity, true);
+        else item = new ShopItem(name, price, quantity, false);
+        
         item.setBuyers(buyers);
 
         newItemName.clear();
@@ -241,9 +313,10 @@ public class Controller {
         ObservableList<ShopItem> items = table.getItems();
         int index = items.indexOf(item);
         if(index != -1) {
-            items.get(index).mergeEquals(item);
-        }else items.add(item);
+            table.getItems().get(index).mergeEquals(item);
+        } else table.getItems().add(item);
         table.refresh();
+        newItemName.requestFocus();
     }
 
     @FXML
@@ -307,20 +380,70 @@ public class Controller {
         List<ShopItem> items = new FileHandler().getReceiptList_UNES();
         
         while(!items.isEmpty()) {
-            table.getItems().add(items.remove(0));
+            table.getItems().add(items.removeFirst());
         }
     }
     
+    // LEGACY
+//    private void populate(File selectedFile) throws IOException {
+//
+//        List<ShopItem> items = null;
+//
+//        if(selectedFile.getName().endsWith(".pdf")) items = new FileHandler(new PDFTextStripper().getText(Loader.loadPDF(selectedFile))).getReceiptList_UNES();
+//        else if(selectedFile.getName().endsWith(".txt")) {
+//            CheckType checkType = getCheckType(selectedFile);
+//            if(checkType == CheckType.EVERLI) items = new FileHandler(selectedFile).getReceiptList_EVERLI();
+//            else if(checkType == CheckType.UNES) items = new FileHandler(selectedFile).getReceiptList_UNES();
+//            else if (checkType == CheckType.DELIVEROO) items = new FileHandler(selectedFile).getReceiptList_UNES();
+//            else System.out.println("\n\nATTENZIONE: getCheckType ritorna DEFAULT\n\n");
+//        }
+//        else throw new IllegalArgumentException("Unrecognized file type");
+//
+//        assert items != null;
+//        while(!items.isEmpty()) {
+//            table.getItems().add(items.removeFirst());
+//        }
+//    }
+    
     private void populate(File selectedFile) throws IOException {
-        //Populate the table
-        List<ShopItem> items = new FileHandler(selectedFile).getReceiptList_UNES();
-        
-        while(!items.isEmpty()) {
-            table.getItems().add(items.remove(0));
+
+        List<ShopItem> items = null;
+        String fileToText;
+
+        if(selectedFile.getName().endsWith(".pdf")) fileToText = new PDFTextStripper().getText(Loader.loadPDF(selectedFile));
+        else if(selectedFile.getName().endsWith(".txt")) fileToText = Files.readString(selectedFile.toPath());
+        else throw new IllegalArgumentException("Unrecognized file type");
+
+        switch (getCheckType(fileToText)) {
+            case UNES -> items = new FileHandler(fileToText).getReceiptList_UNES();
+            case EVERLI -> items = new FileHandler(fileToText).getReceiptList_EVERLI();
+            case DELIVEROO -> items = new FileHandler(fileToText).getReceiptList_DELIVEROO();
+            default -> System.out.println("\n\nATTENZIONE: getCheckType ritorna DEFAULT\n\n");
         }
+
+        assert items != null;
+        while(!items.isEmpty()) {
+            table.getItems().add(items.removeFirst());
+        }
+    }
+    
+    public CheckType getCheckType(File selectedFile) throws IOException {
+        String str = Files.readString(selectedFile.toPath());
+        if(str.contains("UNES")) return CheckType.UNES;
+        else if(str.contains("Everli")) return CheckType.EVERLI;
+        else if (str.contains("DELIVEROO")) return CheckType.DELIVEROO;
+        else return CheckType.DEFAULT;
+    }
+    
+    public CheckType getCheckType(String str) {
+        if(str.contains("UNES")) return CheckType.UNES;
+        else if(str.contains("Everli")) return CheckType.EVERLI;
+        else if (str.contains("Deliveroo")) return CheckType.DELIVEROO;
+        else return CheckType.DEFAULT;
     }
     
     private int getVisibleRow(int scrollIndex) {
+        if(table.getItems().isEmpty()) return 0;
         // Get the TableView's skin
         TableViewSkin<?> skin = (TableViewSkin<?>) table.getSkin();
         if (skin == null) return -1;
@@ -343,6 +466,12 @@ public class Controller {
         
         //Set up the table
         
+        // * Given an "AdvancedTableColumn" class that extends the "TableColumn" class
+        // * Possible method to group the first 3/4 lines of the following 5 column setups
+        
+        // ? The idea would be:
+        // ? public AdvancedTableColumn<S, T>(String colName, String cellValueFactory, StringConverter strConverter, String style);
+        
         TableColumn<ShopItem, String> itemNameCol = new TableColumn<>("Articolo");
         itemNameCol.setCellValueFactory(new PropertyValueFactory<>("itemName"));
         itemNameCol.setCellFactory(TextFieldTableCell.forTableColumn());
@@ -352,11 +481,23 @@ public class Controller {
             event.consume();
         });
         
-        TableColumn<ShopItem, Float> priceCol = new TableColumn<>("Prezzo");
-        priceCol.setCellValueFactory(new PropertyValueFactory<>("price"));
-        priceCol.setCellFactory(TextFieldTableCell.forTableColumn(new FloatStringConverter()));
+        TableColumn<ShopItem, Float> unitPriceCol = new TableColumn<>("Prezzo Unitario");
+        unitPriceCol.setCellValueFactory(new PropertyValueFactory<>("price"));
+        unitPriceCol.setCellFactory(TextFieldTableCell.forTableColumn(new CurrencyFloatStringConverter("€")));
+        unitPriceCol.setStyle("-fx-alignment: CENTER;");
+        unitPriceCol.setOnEditCommit(event -> {
+            event.getRowValue().setPrice(event.getNewValue().toString().replace(" €", ""));
+            table.refresh();
+            event.consume();
+        });
+        
+        
+        TableColumn<ShopItem, Float> priceCol = new TableColumn<>("Prezzo Totale");
+        priceCol.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
+        priceCol.setCellFactory(TextFieldTableCell.forTableColumn(new CurrencyFloatStringConverter("€")));
+        priceCol.setStyle("-fx-alignment: CENTER;");
         priceCol.setOnEditCommit(event -> {
-            event.getRowValue().setPrice(event.getNewValue());
+            event.getRowValue().setTotalPrice(event.getNewValue().toString().replace(" €", ""));
             table.refresh();
             event.consume();
         });
@@ -364,6 +505,7 @@ public class Controller {
         TableColumn<ShopItem, Integer> amountCol = new TableColumn<>("Quantità");
         amountCol.setCellValueFactory(new PropertyValueFactory<>("amount"));
         amountCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+        amountCol.setStyle("-fx-alignment: CENTER;");
         amountCol.setOnEditCommit(event -> {
             event.getRowValue().setAmount(event.getNewValue());
             table.refresh();
@@ -379,8 +521,7 @@ public class Controller {
             event.consume();
         });
         
-        
-        
-        table.getColumns().addAll(itemNameCol, priceCol, amountCol, buyersCol);
+        table.getColumns().addAll(itemNameCol, unitPriceCol, amountCol, priceCol, buyersCol);
     }
+    
 }
