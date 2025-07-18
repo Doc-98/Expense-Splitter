@@ -145,7 +145,7 @@ public class ShopItem {
         //this.getBuyers().sort(String::compareTo);
     }
     
-    public void setPrice(float price) {
+    private void setPrice(float price) {
         this.price = Math.round(price * 100) / 100f;
         updateTotalPrice();
     }
@@ -232,7 +232,10 @@ public class ShopItem {
      * Is used whenever the {@code price} attribute is changed to maintain coherent the relation with the {@code totalPrice} attribute.
      */
     private void updateTotalPrice() {
-        this.totalPrice = Math.round((this.price * this.amount) * 100) / 100f;
+        float newTotalPrice = Math.round((this.price * this.amount) * 100) / 100f;
+        if(Math.abs(newTotalPrice - this.totalPrice) >= this.price) {
+            this.totalPrice = newTotalPrice;
+        }
     }
     
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -75,8 +75,8 @@ public class CompilationController {
     private void handleConfirmButton() {
         ShopItem currentItem = items.get(index);
         currentItem.setItemName(itemName.getText());
-        currentItem.setTotalPrice(Float.parseFloat(itemPrice.getText()));
         currentItem.setAmount(Integer.parseInt(itemAmount.getText()));
+        currentItem.setTotalPrice(Float.parseFloat(itemPrice.getText()));
         currentItem.setBuyers(itemBuyers.getText());
         table.refresh();
         if(index == items.size() - 1) compilationStage.close();
