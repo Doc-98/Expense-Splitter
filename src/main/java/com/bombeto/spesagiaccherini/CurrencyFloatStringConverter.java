@@ -9,6 +9,30 @@ public class CurrencyFloatStringConverter extends FloatStringConverter {
     public CurrencyFloatStringConverter(String currency) {
         this.currency = currency;
     }
+
+    @Override
+    public Float fromString(String value) {
+
+        // If the specified value is null or zero-length, return null
+        if (value == null) {
+            return null;
+        }
+
+        value = value.trim();
+
+        if (value.isEmpty()) {
+            return null;
+        }
+
+        value = value.replace(",", ".");
+        value = value.replaceAll(" " + currency, "");
+
+        try {
+            return Float.valueOf(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
     
     @Override
     public String toString(Float value) {

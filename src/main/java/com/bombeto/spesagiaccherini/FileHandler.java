@@ -76,7 +76,23 @@ public class FileHandler {
         
         List<ShopItem> list = new ArrayList<>();
         ShopItem item;
-        
+        String line = reader.readLine().replace("\u00A0", " ");
+
+        while ((!line.contains("Delivery (standard)"))) {
+
+            if(line.contains("Cashback")) list.add(new ShopItem("CASHBACK", new CurrencyFloatStringConverter("€").fromString(reader.readLine())));
+
+            line = reader.readLine().replace("\u00A0", " ").trim();
+        }
+
+        list.add(new ShopItem("CONSEGNA", new CurrencyFloatStringConverter("€").fromString(reader.readLine())));
+
+        while ((!line.contains("Service"))) {
+            line = reader.readLine().replace("\u00A0", " ").trim();
+        }
+
+        list.add(new ShopItem("SERVIZIO", new CurrencyFloatStringConverter("€").fromString(reader.readLine())));
+
         while((item = getNewEntry_EVERLI()) != null) {
             list.add(item);
         }
@@ -222,7 +238,7 @@ public class FileHandler {
     
     public void mergeDuplicates(List<ShopItem> list) {
         for(int i = 0; i < list.size(); i++) {
-            for(int j = i + 1; j < list.size(); j++) {
+            for(int j = 1; j < list.size() && j != i; j++) {
                 if(list.get(i).equals(list.get(j))) {
                     list.remove(j);
                     list.get(i).incrementAmount();

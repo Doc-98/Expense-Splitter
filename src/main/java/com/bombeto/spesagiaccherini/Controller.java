@@ -121,14 +121,15 @@ public class Controller {
                 event.consume();
             }
         });
-        
+
+        // Switch between total price and unit price
         priceTypeToggle.setOnMouseReleased(_ -> {
             if(priceTypeToggle.isSelected()) newItemPrice.setPromptText("Prezzo Totale");
             else newItemPrice.setPromptText("Prezzo Unitario");
         });
     }
     
-    File openFile() throws IOException {
+    File openFile() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Resource File");
         fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
@@ -137,9 +138,8 @@ public class Controller {
                 new FileChooser.ExtensionFilter("PDF files", "*.pdf"),
                 new FileChooser.ExtensionFilter("All files", "*.*")
         );
-        File selectedFile = fileChooser.showOpenDialog(stage);
-        
-        return selectedFile;
+
+        return fileChooser.showOpenDialog(stage);
     }
     
     @FXML
@@ -245,6 +245,7 @@ public class Controller {
         newStage.show();
     }
 
+    @SuppressWarnings("SpellCheckingInspection")
     @FXML
     private void setupCheckCompilation() throws IOException {
         if (table.getItems().isEmpty()) return;
@@ -480,18 +481,22 @@ public class Controller {
             table.refresh();
             event.consume();
         });
-        
+
         TableColumn<ShopItem, Float> unitPriceCol = new TableColumn<>("Prezzo Unitario");
         unitPriceCol.setCellValueFactory(new PropertyValueFactory<>("price"));
         unitPriceCol.setCellFactory(TextFieldTableCell.forTableColumn(new CurrencyFloatStringConverter("€")));
         unitPriceCol.setStyle("-fx-alignment: CENTER;");
         unitPriceCol.setOnEditCommit(event -> {
-            event.getRowValue().setPrice(event.getNewValue().toString().replace(" €", ""));
+            try {
+                event.getRowValue().setPrice(event.getNewValue().toString().replace(" €", ""));
+            } catch (NullPointerException _) {
+                System.out.println("- empty string or invalid number format");
+            }
             table.refresh();
             event.consume();
         });
-        
-        
+
+
         TableColumn<ShopItem, Float> priceCol = new TableColumn<>("Prezzo Totale");
         priceCol.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
         priceCol.setCellFactory(TextFieldTableCell.forTableColumn(new CurrencyFloatStringConverter("€")));
@@ -523,5 +528,5 @@ public class Controller {
         
         table.getColumns().addAll(itemNameCol, unitPriceCol, amountCol, priceCol, buyersCol);
     }
-    
+
 }

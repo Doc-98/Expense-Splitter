@@ -96,7 +96,7 @@ public class ShopItem {
     }
     
     public List<String> getBuyers() {
-        return buyers.keySet().stream().toList();
+        return new ArrayList<>(buyers.keySet());
     }
     
     public Map<String, Integer> getBuyersMap() { return buyers; }
@@ -142,7 +142,7 @@ public class ShopItem {
                 }
             }
         }
-        //this.getBuyers().sort(String::compareTo);
+        this.getBuyers().sort(String::compareTo);
     }
     
     private void setPrice(float price) {
