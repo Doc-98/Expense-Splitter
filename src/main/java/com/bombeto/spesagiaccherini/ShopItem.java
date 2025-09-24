@@ -2,6 +2,7 @@ package com.bombeto.spesagiaccherini;
 
 import java.util.*;
 
+@SuppressWarnings("unused")
 public class ShopItem {
     
     private String itemName;
