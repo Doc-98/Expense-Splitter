@@ -537,11 +537,8 @@ export default function BillView() {
           label="Share recap"
           title={bill?.title}
           getText={() => formatBillRecap({ ...bill, payers: billPayers }, items, allMembers, format)}
+          onExportCsv={exportCsv}
         />
-        <span className="recap-divider" />
-        <button type="button" className="btn-secondary" onClick={exportCsv}>
-          Export CSV
-        </button>
       </div>
       <PrintableBillRecap bill={{ ...bill, payers: billPayers }} items={items} members={allMembers} />
 

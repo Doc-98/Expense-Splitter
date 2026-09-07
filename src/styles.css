@@ -375,6 +375,27 @@ code {
 }
 .btn-icon:hover { color: var(--warn); }
 
+/* A plain SVG-icon button/link — GroupView.jsx's header (Share/Stats/
+   Settings) and anywhere else an icons.jsx glyph stands in for what used
+   to be a text link. Deliberately its own class rather than reusing
+   .btn-icon above: that one's hover color (--warn, a warm red) reads as
+   "this deletes/cancels something," right for the ↑ collapse it was built
+   for but wrong for plain navigation/utility icons — these hover toward
+   the accent instead, same as any other link. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.icon-btn:hover { background: var(--accent-light); color: var(--accent-dark); }
+
 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft); margin-bottom: var(--space-sm); }
 
 input[type="text"], input[type="email"], input[type="password"], input:not([type]), select {
@@ -567,16 +588,6 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
    inner fix. min-width: 0 here closes that off at this level too. */
 .bill-list-item .card-list-item { flex: 1; min-width: 0; }
 
-.bill-list-controls { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg); }
-/* Pinned to the row's right edge, opposite "Select bills" (its own sibling
-   here, left-aligned by just being first in source order) regardless of
-   whether that one's currently rendered at all — an empty group hides it
-   entirely, and this should still land at the row's right edge either
-   way. Plain .btn-link now (see the JSX comment for why) — nothing else
-   to override, its own font-size/color/weight already match
-   "Select bills" exactly. */
-.recurring-bills-btn { margin-left: auto; }
-
 /* Reuses the same "receipt tape" search bar treatment as the in-app
    guide's own search (.guide-search-input) — same torn-edge look, same
    plain substring/case-insensitive matching underneath. */
@@ -588,18 +599,20 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
    own right edge, after Filters, rather than a separate header row just
    for it. */
 .bill-search-collapse { flex-shrink: 0; }
-/* The "Search" toggle in .group-actions that opens the section back up —
-   pushed to the row's right edge (margin-left: auto, the standard flex
-   trick for it) rather than sitting immediately next to the member-count
-   button, so it reads as its own thing on the opposite side of the row
-   instead of crowding Invite/member-count on the left. */
-.bill-search-toggle { margin-left: auto; }
-/* Same "•" convention as .bill-filter-toggle-active for "something's set
-   even though you can't see it right now." Just weight, not color — a
-   .btn-secondary's text is already accent-dark by default (same as
-   Invite), so color alone wouldn't read as a distinct "active" state
-   here the way it does on .bill-filter-toggle's plain link text. */
-.bill-search-toggle-active { font-weight: 700; }
+/* The search toggle in .group-actions that opens the section back up —
+   icon-only (a magnifying glass, no "Search" label — it only ever opens
+   the box, filtering itself already happens live as you type), pushed to
+   the row's right edge (margin-left: auto) rather than sitting immediately
+   next to the member-count button, so it reads as its own thing on the
+   opposite side of the row instead of crowding it on the left. Sized down
+   from .btn-secondary's own text padding, which reads as oversized around
+   a lone 16px icon. */
+.bill-search-toggle { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; padding: 9px; }
+/* Same "something's set even though you can't see it right now" signal
+   .bill-filter-toggle-active gives its own text — inverted to a solid fill
+   instead, since there's no text left here to weight/recolor once this
+   became icon-only. */
+.bill-search-toggle-active { background: var(--accent); color: white; }
 
 .bill-filters-panel {
   background: var(--surface);
@@ -1039,6 +1052,24 @@ input.item-editable-input, textarea.item-editable-input {
    (var(--space-lg)) now that the zeroing rule above excludes this class —
    only padding-top/border-top need setting here. */
 .section-always-divided { padding-top: var(--space-lg); border-top: 1px solid var(--border); }
+/* GroupSettings.jsx's "Members" heading, now sharing its row with the
+   Invite button — the divider/spacing that would normally come from
+   .settings-section-title itself moves to this wrapper (and gets reset on
+   the h2 nested inside it), since wrapping the h2 in a flex row takes it
+   out of the plain sibling chain :first-of-type above relies on to know
+   whether a section is the page's very first (Members never actually is —
+   "Group name" always precedes it — this just says so explicitly instead
+   of leaning on a selector that no longer sees it as a sibling). */
+.settings-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: var(--space-lg) 0 var(--space-sm);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border);
+}
+.settings-section-title-row .settings-section-title { margin: 0; padding-top: 0; border-top: none; }
 /* Same divider look as .group-stats-preview-title above (generous top
    margin, a thin rule, breathing room below it) but as a standalone
    utility rather than coupled to .settings-section-title — for a heading
@@ -1163,6 +1194,12 @@ input.item-editable-input, textarea.item-editable-input {
 .threshold-input-wrap input { width: 90px; text-align: right; font-family: var(--font-mono); }
 
 .share-button-wrap { position: relative; display: flex; align-items: center; gap: 10px; margin-top: var(--space-sm); }
+/* Icon mode (GroupView.jsx's header, alongside the plain .icon-btn Stats/
+   Settings links) — no margin-top to throw it out of line with its icon
+   siblings, and no gap needed since there's nothing but the trigger button
+   itself most of the time (the copy-status message is positioned off to
+   the side, not inline — see .share-status-icon below). */
+.share-button-wrap-icon { margin-top: 0; gap: 0; }
 .share-menu-popover {
   position: absolute;
   left: 0;
@@ -1175,6 +1212,11 @@ input.item-editable-input, textarea.item-editable-input {
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
   z-index: 10;
 }
+/* Right-anchored variant — for a trigger sitting near the right edge of a
+   narrow header (GroupView.jsx's Share icon), where the default left:0
+   anchor would push the menu's right edge past the viewport instead of
+   opening safely inward. */
+.share-menu-popover-right { left: auto; right: 0; }
 /* margin-bottom here, on top of .group-stats-preview-title's own
    margin-top below, so the gap above that section's divider doesn't rely
    solely on one side's margin — belt and suspenders against the divider
@@ -1185,12 +1227,23 @@ input.item-editable-input, textarea.item-editable-input {
    until there's an actual verdict on how it looks. */
 .recap-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: var(--space-sm); margin-bottom: var(--space-lg); flex-wrap: wrap; }
 .recap-actions .share-button-wrap { margin-top: 0; }
-/* A thin separator between the share menu and a standalone export button
-   sitting in the same row (e.g. "Export CSV" on a bill) — stretches to the
-   row's own height rather than a fixed one, so it lines up with whatever
-   the actual button heights turn out to be. */
-.recap-divider { align-self: stretch; width: 1px; background: var(--border); }
 .share-status { font-size: 13px; }
+/* Icon mode's own copy-status message — a header packed tight with three
+   icon buttons has no spare inline room for this without shoving Stats/
+   Settings around every time it briefly appears, so it floats below the
+   trigger instead, same idea as .share-menu-popover-right. */
+.share-status-icon {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 10;
+}
 
 /* ---------- Group stats page ---------- */
 .stats-summary {

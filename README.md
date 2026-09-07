@@ -457,10 +457,10 @@ not data owned by any particular bill.
 ## Your groups & inviting people
 
 The groups list (`/`) shows your groups first, paginated at 10 per page,
-with "Create a new group" below it rather than above. **Invite** on a
-group's page gives a QR code (for someone standing next to you) plus a
-shareable link — both generated client-side, no third-party image service
-involved.
+with "Create a new group" below it rather than above. **Invite**, in
+Group Settings next to Members, gives a QR code (for someone standing next
+to you) plus a shareable link — both generated client-side, no third-party
+image service involved.
 
 ## Personal spending
 
@@ -632,8 +632,10 @@ section self-contained.
 
 ## Recaps, PDFs, and CSV
 
-Every bill, every group's settle-up, and every stats page has a single
-**Share recap** button (`src/components/ShareButton.jsx`) with two options:
+Every bill, every group's settle-up (that one's the share icon on the
+group page, next to Stats and Settings), and every stats page has a single
+**Share** button (`src/components/ShareButton.jsx`) with up to three
+options, each only offered where it actually applies:
 
 - **Share as text** — via the phone's native share sheet (falling back to
   clipboard on desktop), formatted with WhatsApp's own `*bold*`/`_italic_`
@@ -643,10 +645,18 @@ Every bill, every group's settle-up, and every stats page has a single
   `#root`, swapped visible via `@media print` — the fix for a real bug a
   `visibility: hidden` approach had (invisible content still reserved its
   full height, routinely producing a trailing blank page).
+- **Export as CSV** (`src/lib/csv.js`) — a bill's own CSV is one row per
+  item; a group's is its whole bill history. Used to be a second, separate
+  button next to Share — folded into the same menu instead, since "share as
+  a recap" and "export as a file" were really the same underlying action in
+  a different format, not two different features.
 
-A bill, and a group's own settle-up recap, also get a standalone **Export
-CSV** button (`src/lib/csv.js`) — one row per item for a bill, or the whole
-group's bill history for a group export.
+`ShareButton` itself supports an icon-only mode (`icon`), used for the
+group page's own trigger — the same component either way, just a glyph
+instead of a text label, with its own props for which of the three options
+above actually apply (`getText`/`title` gate the first two together;
+`onExportCsv` gates the third independently, since a personal space still
+wants CSV with nothing to "share as text").
 
 ### Importing from Splitwise
 
