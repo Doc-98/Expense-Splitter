@@ -1,20 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useCurrency, CURRENCIES } from '../context/CurrencyContext'
-import ThresholdsSection from '../components/ThresholdsSection'
+import { getStatsPreferences, setStatsPreferences } from '../lib/statsPreferences'
+import { signOutAndClearCaches } from '../lib/signOut'
+import { GRANULARITIES, granularityLabel } from '../components/TimeRangeSelector'
+import BudgetsSection from '../components/BudgetsSection'
 import ScanSettingsSection from '../components/ScanSettingsSection'
+import GuideSection from '../components/GuideSection'
+import AboutSection from '../components/AboutSection'
+import SettingsGroupsSection from '../components/SettingsGroupsSection'
+import SettingsUpdatesSection from '../components/SettingsUpdatesSection'
+import SettingsNav from '../components/SettingsNav'
+import ConfirmSheet from '../components/ConfirmSheet'
 import BackButton from '../components/BackButton'
+import { MenuIcon, ProfileIcon, GroupsNavIcon, BudgetIcon, ScanIcon, GuideIcon, UpdatesIcon, AboutIcon } from '../components/icons'
 
-// Everything account-level that used to be scattered across the header's
-// own dropdown menu (theme, currency, thresholds, scan settings) plus the
-// one thing that actually called for a real settings page to exist:
-// changing your own display name. The dropdown itself now just links here
-// instead of holding all of this directly — see AppHeader.jsx.
-export default function Settings() {
-  const navigate = useNavigate()
+const SECTIONS = [
+  { id: 'profile', label: 'Profile', Icon: ProfileIcon },
+  { id: 'groups', label: 'Groups', Icon: GroupsNavIcon },
+  { id: 'budgets', label: 'Budgets', Icon: BudgetIcon },
+  { id: 'scan', label: 'Scan', Icon: ScanIcon },
+  { id: 'guide', label: 'How to Use', Icon: GuideIcon },
+  { id: 'updates', label: 'Updates', Icon: UpdatesIcon },
+  { id: 'about', label: 'About', Icon: AboutIcon },
+]
+
+// Your name, dark mode, currency, and the two per-device stats preferences
+// that used to only be reachable from inside Your Stats itself
+// (statsPreferences.js — the default period and where Budgets sits on that
+// page). Both still also work exactly as they did — the inline "Set ___ as
+// default" link, and the link right in Your Stats' own Budgets section —
+// this is just a second, more discoverable way to reach the same stored
+// preference, not a replacement for either.
+function ProfileSection() {
   const { user, displayName, setDisplayName } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { code, setCurrency } = useCurrency()
@@ -22,15 +43,7 @@ export default function Settings() {
   const [nameDraft, setNameDraft] = useState(displayName)
   const [nameSaved, setNameSaved] = useState(false)
   const [nameError, setNameError] = useState(null)
-
-  // displayName loads asynchronously (see AuthContext) — arriving after
-  // this page has already mounted is the common case, not an edge case,
-  // since the dropdown link to here doesn't wait on it. Also picks up our
-  // own successful save below, though at that point it's just resyncing
-  // to what nameDraft already says.
-  useEffect(() => {
-    setNameDraft(displayName)
-  }, [displayName])
+  const [prefs, setPrefs] = useState(getStatsPreferences)
 
   async function saveDisplayName(e) {
     e.preventDefault()
@@ -42,22 +55,17 @@ export default function Settings() {
       setNameError(error.message)
       return
     }
-    // Optimistic, straight into AuthContext — every other place your name
-    // shows (the header chip, any group you're in) reads from the same
-    // shared value, so this is the one update that makes it show up
-    // everywhere at once rather than needing a refetch or reload.
     setDisplayName(trimmed)
     setNameSaved(true)
     setTimeout(() => setNameSaved(false), 1500)
   }
 
-  return (
-    <div className="page">
-      <header className="page-header">
-        <BackButton onClick={() => navigate(-1)} />
-        <h1>Settings</h1>
-      </header>
+  function updatePref(partial) {
+    setPrefs(setStatsPreferences(partial))
+  }
 
+  return (
+    <>
       <h2 className="settings-section-title">Your name</h2>
       <p className="muted">Shown to everyone in every group you're part of.</p>
       <form onSubmit={saveDisplayName} className="inline-form">
@@ -94,29 +102,101 @@ export default function Settings() {
         </select>
       </div>
 
-      <h2 className="settings-section-title">Spending &amp; scanning</h2>
-      {/* Collapsed by default — both of these are long enough on their own
-          (a full category list; four scan strategies each with their own
-          sub-fields) that leaving them permanently expanded would make
-          Settings mostly about them rather than a short page most people
-          only glance at. Same <details>/<summary> disclosure pattern
-          already used on the Guide page. Each section's actual content is
-          ThresholdsSection/ScanSettingsSection — shared with their own
-          standalone pages at /thresholds and /scan-settings, which stay
-          around for existing deep links (AccountStats.jsx, CategorizeBills.jsx,
-          ScanReceiptButton.jsx) straight to one or the other. */}
-      <details className="collapsible-section">
-        <summary>Spending thresholds</summary>
-        <div className="collapsible-section-body">
-          <ThresholdsSection />
+      <h2 className="settings-section-title">Stats</h2>
+      <div className="settings-row">
+        <span>Default period</span>
+        <select
+          value={prefs.defaultGranularity}
+          onChange={(e) => updatePref({ defaultGranularity: e.target.value })}
+        >
+          {GRANULARITIES.map((g) => (
+            <option key={g} value={g}>
+              {granularityLabel(g)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="settings-row">
+        <span>Budgets position on Your Stats</span>
+        <select
+          value={prefs.thresholdsPosition}
+          onChange={(e) => updatePref({ thresholdsPosition: e.target.value })}
+        >
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </div>
+    </>
+  )
+}
+
+const CONTENT = {
+  profile: ProfileSection,
+  groups: SettingsGroupsSection,
+  budgets: BudgetsSection,
+  scan: ScanSettingsSection,
+  guide: GuideSection,
+  updates: SettingsUpdatesSection,
+  about: AboutSection,
+}
+
+export default function Settings() {
+  const navigate = useNavigate()
+  const [activeId, setActiveId] = useState('profile')
+  const [expanded, setExpanded] = useState(false)
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+
+  const activeSection = SECTIONS.find((s) => s.id === activeId)
+  const Content = CONTENT[activeId]
+
+  async function doSignOut() {
+    if (signingOut) return
+    setSigningOut(true)
+    await signOutAndClearCaches()
+    // No navigate() here — the auth-state listener in AuthContext flips
+    // `session` to null the moment this resolves, and RequireAuth (see
+    // App.jsx) redirects to /login on its own the same way it does for any
+    // other session loss.
+  }
+
+  return (
+    <div className="page settings-page">
+      <header className="page-header">
+        <BackButton onClick={() => navigate(-1)} />
+        <button
+          type="button"
+          className={`icon-btn${expanded ? ' active-toggle' : ''}`}
+          onClick={() => setExpanded((e) => !e)}
+          aria-label="Toggle menu"
+          aria-expanded={expanded}
+        >
+          <MenuIcon size={19} />
+        </button>
+        <h1>{activeSection.label}</h1>
+      </header>
+
+      <div className={`settings-shell${expanded ? ' expanded' : ''}`}>
+        <SettingsNav
+          sections={SECTIONS}
+          activeId={activeId}
+          onSelect={setActiveId}
+          onSignOut={() => setConfirmingSignOut(true)}
+        />
+        <div className="settings-content">
+          <Content />
         </div>
-      </details>
-      <details className="collapsible-section">
-        <summary>Scan settings</summary>
-        <div className="collapsible-section-body">
-          <ScanSettingsSection />
-        </div>
-      </details>
+      </div>
+
+      {confirmingSignOut && (
+        <ConfirmSheet
+          title="Sign out of Spesa?"
+          body="You'll need to sign back in to see your groups again."
+          confirmLabel={signingOut ? 'Signing out…' : 'Sign out'}
+          onConfirm={doSignOut}
+          onCancel={() => !signingOut && setConfirmingSignOut(false)}
+        />
+      )}
     </div>
   )
 }

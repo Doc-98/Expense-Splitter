@@ -7,7 +7,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Was 'autoUpdate' — a new deployed version used to take over silently
+      // in the background with no way to see or trigger it. 'prompt' instead
+      // leaves a new service worker waiting until something explicitly
+      // activates it, which is what makes the Settings > Updates section's
+      // "Check for updates" / "Reload to update" actually mean something
+      // (see src/components/SettingsUpdatesSection.jsx's useRegisterSW call)
+      // rather than almost always just reporting "up to date" because the
+      // update had already silently applied before anyone looked.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Spesa - Expense Splitter',

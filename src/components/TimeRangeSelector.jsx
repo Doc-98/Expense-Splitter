@@ -1,7 +1,10 @@
 import { useEffect } from 'react'
 import { isTypingTarget } from '../lib/isTypingTarget'
 
-const GRANULARITIES = ['week', 'month', 'year', 'all']
+// Exported for the Settings page's own "Default period" picker (Profile
+// section) — same list and labels, so it can't drift from what this
+// selector itself offers.
+export const GRANULARITIES = ['week', 'month', 'year', 'all']
 
 // Extra jump tiers beyond the ordinary single ‹ / › step, smallest first.
 // Month view gets one (a full year, 12 months). Week view gets two — a
@@ -18,7 +21,7 @@ const JUMP_TIERS = {
   month: [{ amount: 12, unitLabel: '1 year' }],
 }
 
-function granularityLabel(g) {
+export function granularityLabel(g) {
   return g === 'all' ? 'All time' : g.charAt(0).toUpperCase() + g.slice(1)
 }
 

@@ -55,7 +55,7 @@ export const CATEGORY_COLORS = [
 
 // The exact starter set create_group() seeds into every new group's own
 // categories table (see supabase/schema.sql) — duplicated here as plain
-// data, not fetched, so the Thresholds page can show a selector for each of
+// data, not fetched, so the Budgets page can show a selector for each of
 // them even for someone not in any group yet. If the seeded set in
 // schema.sql ever changes, this needs updating to match by hand — there's
 // no single source of truth shared between SQL and JS here.

@@ -5,6 +5,8 @@ import { ThemeProvider } from './context/ThemeContext'
 import { CurrencyProvider } from './context/CurrencyContext'
 import AppHeader from './components/AppHeader'
 import BootSplash from './components/BootSplash'
+import InstallPrompt from './components/InstallPrompt'
+import PwaUpdater from './components/PwaUpdater'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
 import Groups from './pages/Groups'
@@ -19,7 +21,7 @@ import GroupSettings from './pages/GroupSettings'
 import GroupStats from './pages/GroupStats'
 import AccountStats from './pages/AccountStats'
 import ScanSettings from './pages/ScanSettings'
-import Thresholds from './pages/Thresholds'
+import Budgets from './pages/Budgets'
 import Settings from './pages/Settings'
 
 // A one-time-use flow for most people — kept out of the main bundle
@@ -87,81 +89,90 @@ function Shell() {
   }, [session, navigate, location.pathname])
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      {/* Not behind RequireAuth, on purpose — a person lands here straight
-          from an emailed link, not through the normal signed-in flow, and
-          RequireAuth's own session===null case would just bounce them to
-          /login with no explanation. ResetPassword.jsx handles all three
-          states of its own (still-loading / invalid-or-expired link /
-          ready) itself, with a message that actually says which. */}
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/join/:code" element={<RequireAuth><JoinGroup /></RequireAuth>} />
-      <Route path="/claim/:token" element={<RequireAuth><ClaimGuest /></RequireAuth>} />
-      <Route path="/about" element={<RequireAuth><About /></RequireAuth>} />
-      <Route path="/guide" element={<RequireAuth><Guide /></RequireAuth>} />
-      <Route path="/stats" element={<RequireAuth><AccountStats /></RequireAuth>} />
-      <Route
-        path="/stats/graphs"
-        element={
-          <RequireAuth>
-            <Suspense fallback={<div className="page-loading">Loading…</div>}>
-              <AccountGraphs />
-            </Suspense>
-          </RequireAuth>
-        }
-      />
-      <Route path="/scan-settings" element={<RequireAuth><ScanSettings /></RequireAuth>} />
-      <Route path="/thresholds" element={<RequireAuth><Thresholds /></RequireAuth>} />
-      <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-      <Route path="/" element={<RequireAuth><Groups /></RequireAuth>} />
-      <Route path="/groups/:groupId" element={<RequireAuth><GroupView /></RequireAuth>} />
-      <Route path="/groups/:groupId/settings" element={<RequireAuth><GroupSettings /></RequireAuth>} />
-      <Route path="/groups/:groupId/stats" element={<RequireAuth><GroupStats /></RequireAuth>} />
-      <Route
-        path="/groups/:groupId/stats/graphs"
-        element={
-          <RequireAuth>
-            <Suspense fallback={<div className="page-loading">Loading…</div>}>
-              <GroupGraphs />
-            </Suspense>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/groups/:groupId/import"
-        element={
-          <RequireAuth>
-            <Suspense fallback={<div className="page-loading">Loading…</div>}>
-              <ImportBills />
-            </Suspense>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/groups/:groupId/import-bank-statement"
-        element={
-          <RequireAuth>
-            <Suspense fallback={<div className="page-loading">Loading…</div>}>
-              <ImportBankStatement />
-            </Suspense>
-          </RequireAuth>
-        }
-      />
-      <Route path="/groups/:groupId/bills/:billId" element={<RequireAuth><BillView /></RequireAuth>} />
-      <Route path="/groups/:groupId/recurring" element={<RequireAuth><RecurringBills /></RequireAuth>} />
-      <Route
-        path="/groups/:groupId/categorize"
-        element={
-          <RequireAuth>
-            <Suspense fallback={<div className="page-loading">Loading…</div>}>
-              <CategorizeBills />
-            </Suspense>
-          </RequireAuth>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      {/* Both mounted above the routes, not inside RequireAuth — active on
+          any page (signed in or not), not just once someone's past login,
+          and surviving navigation as persistent components rather than
+          remounting (and, for InstallPrompt, re-running its own "have I
+          already shown this" check) on every route change. */}
+      <InstallPrompt />
+      <PwaUpdater />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        {/* Not behind RequireAuth, on purpose — a person lands here straight
+            from an emailed link, not through the normal signed-in flow, and
+            RequireAuth's own session===null case would just bounce them to
+            /login with no explanation. ResetPassword.jsx handles all three
+            states of its own (still-loading / invalid-or-expired link /
+            ready) itself, with a message that actually says which. */}
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/join/:code" element={<RequireAuth><JoinGroup /></RequireAuth>} />
+        <Route path="/claim/:token" element={<RequireAuth><ClaimGuest /></RequireAuth>} />
+        <Route path="/about" element={<RequireAuth><About /></RequireAuth>} />
+        <Route path="/guide" element={<RequireAuth><Guide /></RequireAuth>} />
+        <Route path="/stats" element={<RequireAuth><AccountStats /></RequireAuth>} />
+        <Route
+          path="/stats/graphs"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<div className="page-loading">Loading…</div>}>
+                <AccountGraphs />
+              </Suspense>
+            </RequireAuth>
+          }
+        />
+        <Route path="/scan-settings" element={<RequireAuth><ScanSettings /></RequireAuth>} />
+        <Route path="/budgets" element={<RequireAuth><Budgets /></RequireAuth>} />
+        <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+        <Route path="/" element={<RequireAuth><Groups /></RequireAuth>} />
+        <Route path="/groups/:groupId" element={<RequireAuth><GroupView /></RequireAuth>} />
+        <Route path="/groups/:groupId/settings" element={<RequireAuth><GroupSettings /></RequireAuth>} />
+        <Route path="/groups/:groupId/stats" element={<RequireAuth><GroupStats /></RequireAuth>} />
+        <Route
+          path="/groups/:groupId/stats/graphs"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<div className="page-loading">Loading…</div>}>
+                <GroupGraphs />
+              </Suspense>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/groups/:groupId/import"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<div className="page-loading">Loading…</div>}>
+                <ImportBills />
+              </Suspense>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/groups/:groupId/import-bank-statement"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<div className="page-loading">Loading…</div>}>
+                <ImportBankStatement />
+              </Suspense>
+            </RequireAuth>
+          }
+        />
+        <Route path="/groups/:groupId/bills/:billId" element={<RequireAuth><BillView /></RequireAuth>} />
+        <Route path="/groups/:groupId/recurring" element={<RequireAuth><RecurringBills /></RequireAuth>} />
+        <Route
+          path="/groups/:groupId/categorize"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<div className="page-loading">Loading…</div>}>
+                <CategorizeBills />
+              </Suspense>
+            </RequireAuth>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   )
 }
 
