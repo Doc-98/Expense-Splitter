@@ -1364,6 +1364,14 @@ input.item-editable-input, textarea.item-editable-input {
 .pagination-label { font-size: 13px; color: var(--ink-soft); min-width: 90px; text-align: center; }
 .pagination .btn-icon { font-size: 22px; }
 .pagination .btn-icon:disabled { opacity: 0.3; cursor: default; }
+/* The non-floating variant (see Pagination.jsx's `floating` prop) — a
+   payment history list already tucked inside a collapsed <details> has
+   no need to chase you down the page, and two independently-floating
+   pills on the same page would have no way to avoid landing on top of
+   each other if both ever ended up stuck at once. Plain in-flow
+   positioning sidesteps that; everything else about the pill (border,
+   padding, shape) stays the same. */
+.pagination-inline { position: static; margin: var(--space-md) auto 0; }
 
 .balance-positive { color: var(--accent-dark); }
 .balance-negative { color: var(--warn); }

@@ -1,13 +1,26 @@
 import { useLayoutEffect, useRef } from 'react'
 
-export default function Pagination({ page, setPage, totalItems, pageSize }) {
+// `floating` (default true) is the bill list's own pill: sticky to the
+// bottom of the viewport while there's more page to scroll, docking in
+// flow once you reach the real bottom (see the comment below). Pass
+// `floating={false}` for a page's *second* paginated list on the same
+// page (e.g. SettlementSummary's payment history) — two independent
+// sticky elements at the same `bottom` offset have no way to know about
+// each other, so if both ever ended up "stuck" at once they'd render on
+// top of each other. A secondary, already-tucked-away list like payment
+// history doesn't really need to float anyway; a plain inline pager
+// avoids the collision entirely instead of trying to prevent it.
+export default function Pagination({ page, setPage, totalItems, pageSize, floating = true }) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
   // Set right before a Prev/Next click if the page was scrolled to its
   // true bottom at that moment — i.e. the pill was docked, not floating.
   // Left false otherwise (including after an external page reset, e.g. a
   // filter change elsewhere on the page, which never touches this at
   // all), so the effect below only ever acts right after one of *this*
-  // pill's own buttons caused the page to change while docked.
+  // pill's own buttons caused the page to change while docked. Not used
+  // at all when `floating` is false — an inline pager has no docked/
+  // floating distinction to preserve across a page swap in the first
+  // place.
   const wasAtBottom = useRef(false)
 
   // The bug this exists for: .pagination is `position: sticky`, so once
@@ -38,21 +51,22 @@ export default function Pagination({ page, setPage, totalItems, pageSize }) {
   // shorter than the current scroll position, the browser clamps that on
   // its own during reflow, same as it always does.
   useLayoutEffect(() => {
-    if (!wasAtBottom.current) return
+    if (!floating || !wasAtBottom.current) return
     wasAtBottom.current = false
     window.scrollTo(0, document.documentElement.scrollHeight)
-  }, [page, totalItems])
+  }, [page, totalItems, floating])
 
   if (totalPages <= 1) return null
 
   function goToPage(next) {
-    const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
-    wasAtBottom.current = atBottom
+    if (floating) {
+      wasAtBottom.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+    }
     setPage(next)
   }
 
   return (
-    <div className="pagination">
+    <div className={floating ? 'pagination' : 'pagination pagination-inline'}>
       <button
         type="button"
         className="btn-icon"
