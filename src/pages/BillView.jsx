@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { fetchAllGroupMembers } from '../lib/members'
 import { fetchCategories } from '../lib/categories'
@@ -13,6 +13,7 @@ import ScanReceiptButton from '../components/ScanReceiptButton'
 import ShareButton from '../components/ShareButton'
 import MultiPayerModal from '../components/MultiPayerModal'
 import { PrintableBillRecap } from '../components/PrintableRecap'
+import BackButton from '../components/BackButton'
 import { useCurrency } from '../context/CurrencyContext'
 
 export default function BillView() {
@@ -367,9 +368,7 @@ export default function BillView() {
   return (
     <div className="page receipt-page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}`} />
         <h1>{bill?.title}</h1>
       </header>
 

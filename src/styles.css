@@ -700,32 +700,6 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   z-index: 10;
 }
 
-.member-count-wrap { position: relative; }
-.member-count-btn {
-  background: none;
-  border: none;
-  color: var(--ink-soft);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-}
-.member-count-popover {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 6px);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-sm) var(--space-md);
-  min-width: 160px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  z-index: 10;
-}
-.member-count-popover ul { list-style: none; margin: 0 0 var(--space-sm); padding: 0; font-size: 14px; }
-.member-count-popover li { padding: 3px 0; }
-
 .invite-menu-wrap { position: relative; }
 .invite-menu-popover {
   position: absolute;

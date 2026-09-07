@@ -22,6 +22,7 @@ import { fetchDraft, createDraft, updateDraftReview, deleteDraft } from '../lib/
 import { getBankCategoryMappings, saveBankCategoryMappings } from '../lib/bankCategoryMappings'
 import { initialReviewEntry, resolveCategoryHints } from '../lib/bankStatementReview'
 import InlineEditable from '../components/InlineEditable'
+import BackButton from '../components/BackButton'
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -746,9 +747,7 @@ Date,Description,Amount,Category`
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}/settings`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}/settings`} />
         <h1>Import bank statement</h1>
       </header>
 

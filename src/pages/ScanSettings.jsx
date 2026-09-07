@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import ScanSettingsSection from '../components/ScanSettingsSection'
+import BackButton from '../components/BackButton'
 
 // A thin page wrapper around ScanSettingsSection — the actual UI/logic
 // lives there now, shared with its collapsed form on the Settings page.
@@ -18,9 +19,7 @@ export default function ScanSettings() {
   return (
     <div className="page">
       <header className="page-header">
-        <button type="button" className="btn-link" onClick={goBack}>
-          ← Back
-        </button>
+        <BackButton onClick={goBack} />
         <h1>Scan settings</h1>
       </header>
 

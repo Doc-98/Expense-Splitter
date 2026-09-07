@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useCurrency } from '../context/CurrencyContext'
@@ -13,6 +12,7 @@ import { buildSeries } from '../lib/timeSeries'
 import GraphsPeriodSelector from '../components/GraphsPeriodSelector'
 import LineChart from '../components/LineChart'
 import PieChart from '../components/PieChart'
+import BackButton from '../components/BackButton'
 
 // tab -> the chart's own point granularity — same reasoning (and the same
 // reverted-back-to-this-from-finer-points history) as GroupGraphs.jsx's
@@ -237,9 +237,7 @@ export default function AccountGraphs() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to="/stats" className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to="/stats" />
         <h1>Graphs</h1>
       </header>
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { fetchCategories } from '../lib/categories'
 import { fetchAllRows } from '../lib/fetchAllRows'
@@ -12,6 +12,7 @@ import { useCurrency } from '../context/CurrencyContext'
 import GraphsPeriodSelector from '../components/GraphsPeriodSelector'
 import LineChart from '../components/LineChart'
 import PieChart from '../components/PieChart'
+import BackButton from '../components/BackButton'
 
 // tab -> the chart's own point granularity — a whole calendar month has
 // too many days to plot meaningfully next to a whole year's worth of
@@ -149,9 +150,7 @@ export default function GroupGraphs() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}/stats`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}/stats`} />
         <h1>Graphs{groupName ? ` — ${groupName}` : ''}</h1>
       </header>
 
