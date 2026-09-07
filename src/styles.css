@@ -1303,24 +1303,36 @@ input.item-editable-input, textarea.item-editable-input {
    pass at this (font-size 16px, 2px padding, no inter-button gap) wasn't. */
 .time-range-nav .btn-icon.time-range-jump { font-size: 20px; color: var(--ink-soft); }
 
-/* Sticky to the bottom of the viewport rather than sitting inline at the
+/* Anchored to the bottom of the viewport rather than sitting inline at the
    end of the list — a page's worth of bills can run from a couple of rows
    to a full screen depending on how many day/month dividers fall on it, so
    an inline pager landed in a different spot (sometimes off-screen below
-   the fold) every time you flipped pages. Anchored here, it's always in
-   the same place, no scrolling required to find it again. Floats as its
-   own pill (same border/shadow language as .account-dropdown) since it's
-   no longer part of the normal document flow the rest of the page sits in. */
+   the fold) every time you flipped pages. Floats as its own pill (same
+   border/shadow language as .account-dropdown) since it's no longer part
+   of the normal document flow the rest of the page sits in.
+   `position: fixed`, not `sticky`: sticky only pins to this offset once
+   scrolling would otherwise carry the element past it — on a page short
+   enough to need no scrolling at all (few bills, or a page landing on
+   fewer month dividers than its neighbors), it just sits at its ordinary
+   in-flow position instead, right after however tall that page's bill
+   list happened to be. Since every page of bills is a different height,
+   that made the pill visibly hop up and down the screen switching between
+   pages — fixed keeps it pinned to this exact spot regardless of content
+   height, on every page alike. Centered via left:50%+transform rather
+   than margin:auto, since a fixed element's containing block is the
+   viewport, not .page's own centered column — the two still coincide
+   because .page is itself centered on the same viewport width. */
 .pagination {
-  position: sticky;
+  position: fixed;
+  left: 50%;
   bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
   z-index: 5;
   display: flex;
   width: fit-content;
   align-items: center;
   justify-content: center;
   gap: var(--space-md);
-  margin: var(--space-md) auto var(--space-lg);
   padding: 6px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1330,6 +1342,11 @@ input.item-editable-input, textarea.item-editable-input {
 .pagination-label { font-size: 13px; color: var(--ink-soft); min-width: 90px; text-align: center; }
 .pagination .btn-icon { font-size: 22px; }
 .pagination .btn-icon:disabled { opacity: 0.3; cursor: default; }
+/* Matches the pill's own footprint (padding + border + icon line-height)
+   plus the top/bottom breathing room it used to get from margin — see the
+   comment on .pagination above for why this space needs reserving at all
+   now that the pill itself is `position: fixed`. */
+.pagination-spacer { height: calc(var(--space-md) + 40px + var(--space-lg)); }
 
 .balance-positive { color: var(--accent-dark); }
 .balance-negative { color: var(--warn); }

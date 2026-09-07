@@ -37,6 +37,33 @@ const PERSIST_DEBOUNCE_MS = 400
 // entry, not a target.
 const MAX_PERSIST_BYTES = 1_500_000
 
+// Plain JSON.stringify/parse silently mangles Map and Set: a Map has no
+// own enumerable properties, so it serializes as "{}" and comes back as a
+// plain object — one that looks fine until something calls a Map-only
+// method like .values() on it and throws. That's exactly what happened to
+// accountStatsCache's cached myParticipantByGroup (a real Map) after a
+// refresh on the stats page: it silently became {}, and the next render
+// crashed with no error boundary anywhere in the app to catch it, taking
+// the whole page (and, until a real reload, every page after it) down
+// with it. Cached payloads are free to hold a Map or Set — GroupView's,
+// GroupStats', and the groups list's payloads happen not to today, but
+// nothing stops a future one from doing exactly what AccountStats did —
+// so the round-trip is fixed generically here rather than by keeping every
+// payload Map/Set-free by convention.
+function reviveMapsAndSets(_key, value) {
+  if (value && typeof value === 'object') {
+    if (value.__type === 'Map' && Array.isArray(value.entries)) return new Map(value.entries)
+    if (value.__type === 'Set' && Array.isArray(value.values)) return new Set(value.values)
+  }
+  return value
+}
+
+function replaceMapsAndSets(_key, value) {
+  if (value instanceof Map) return { __type: 'Map', entries: Array.from(value.entries()) }
+  if (value instanceof Set) return { __type: 'Set', values: Array.from(value.values()) }
+  return value
+}
+
 export function createLruCache(maxEntries = 5, storageKey = null) {
   const map = new Map()
   let persistTimer = null
@@ -44,7 +71,7 @@ export function createLruCache(maxEntries = 5, storageKey = null) {
   if (storageKey) {
     try {
       const raw = sessionStorage.getItem(storageKey)
-      const entries = raw ? JSON.parse(raw) : null
+      const entries = raw ? JSON.parse(raw, reviveMapsAndSets) : null
       if (Array.isArray(entries)) {
         for (const [key, value] of entries) map.set(key, value)
       }
@@ -57,7 +84,7 @@ export function createLruCache(maxEntries = 5, storageKey = null) {
   function persistNow() {
     if (!storageKey) return
     try {
-      const serialized = JSON.stringify(Array.from(map.entries()))
+      const serialized = JSON.stringify(Array.from(map.entries()), replaceMapsAndSets)
       if (serialized.length > MAX_PERSIST_BYTES) {
         sessionStorage.removeItem(storageKey)
         return
