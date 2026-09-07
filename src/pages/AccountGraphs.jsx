@@ -44,7 +44,7 @@ function categoryKeyFor(name) {
 // fact. Deliberately normalizes into `.total` (the field buildSeries
 // actually reads) here rather than carrying `.consumed` through — a
 // *personal* spending chart means "my own share," never "what I fronted,"
-// same reasoning the Spending Thresholds budgets already use.
+// same reasoning the Budgets section already uses.
 function mergeDailyMaps(perGroupDailies) {
   const merged = {}
   for (const daily of perGroupDailies) {

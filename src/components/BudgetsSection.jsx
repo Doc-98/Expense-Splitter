@@ -7,13 +7,17 @@ import { parseNumber } from '../lib/parseNumber'
 
 const DEFAULT_NAME_KEYS = new Set(DEFAULT_CATEGORIES.map((c) => c.name.toLowerCase()))
 
-// The actual "spending thresholds" UI/logic, pulled out of what used to be
-// Thresholds.jsx's whole page so it can be reused two ways: standalone at
-// /thresholds (still there, for the existing deep links from AccountStats.jsx
-// and anywhere else that jumps straight here), and collapsed inside the
-// Settings page for anyone browsing in from there instead. Thresholds.jsx
+// The actual "budgets" (formerly "spending thresholds" — renamed in the UI,
+// see the Settings restructure) UI/logic, pulled out of what used to be
+// Budgets.jsx's whole page so it can be reused two ways: standalone at
+// /budgets (still there, for the existing deep links from AccountStats.jsx
+// and anywhere else that jumps straight here), and inline inside the
+// Settings page for anyone browsing in from there instead. Budgets.jsx
 // itself is now just this plus a page header — see it for that wrapper.
-export default function ThresholdsSection() {
+// Kept internally as "threshold" throughout (state, the spending_thresholds
+// table, lib/thresholds.js) — only the user-facing copy changed, to avoid a
+// database migration and a much wider rename for no visible benefit.
+export default function BudgetsSection() {
   const { user } = useAuth()
 
   const [loading, setLoading] = useState(true)

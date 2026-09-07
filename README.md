@@ -36,9 +36,11 @@ the (tiny) hosting bill. Setup takes about 20 minutes.
 - [Editing items](#editing-items)
 - [Backdating a bill](#backdating-or-postdating-a-bill)
 - [Settings page](#settings-page)
+- [Updates section, and the service worker](#updates-section-and-the-service-worker)
+- [Add to home screen](#add-to-home-screen)
 - [Currency](#currency)
 - [Categories](#categories)
-- [Spending thresholds](#spending-thresholds)
+- [Budgets](#budgets)
 - [Period-over-period comparison](#period-over-period-comparison)
 - [Time period controls](#time-period-controls)
 - [Spending graphs](#spending-graphs)
@@ -272,18 +274,77 @@ same-day bills by landing on midnight.
 
 ## Settings page
 
-`/settings` (account menu → Settings) holds everything account-level in one
-place: your display name, dark mode, currency, and — collapsed by default,
-since both are long — Spending thresholds and Scan settings. The account
-menu itself now only holds what you'd actually reach for in the moment: How
-to use, Your stats, Settings, About, Sign out.
+Tapping your name, top right of any page, opens `/settings` — everything
+account-level, arranged into sections down a side nav rather than a single
+long scroll: **Profile** (display name, dark mode, currency, and the two
+per-device stats preferences below), **Groups** (every group you're in,
+with a way to leave one directly), **Budgets**, **Scan**, **How to Use**,
+**Updates**, and **About**. **Sign Out** sits at the bottom of the nav,
+split off by its own divider — it's an action, not a section, and opens a
+confirm sheet rather than switching content.
 
-Thresholds and Scan settings are also still their own standalone pages
-(`/thresholds`, `/scan-settings`) for the existing deep links elsewhere in
-the app (Your Stats' "Manage thresholds →", the scan button's "change"
-link) — same underlying component either way
-(`src/components/ThresholdsSection.jsx` /
-`src/components/ScanSettingsSection.jsx`), not two copies to keep in sync.
+The nav starts as icons only; the header's hamburger button expands it
+with labels. Selecting a section swaps `.settings-content` in place — one
+page, not a chain of routes — so `Settings.jsx` itself is just this shell
+(`SettingsNav.jsx` + a `CONTENT` lookup); each section's actual UI lives in
+its own component, several of them shared:
+
+| Section | Component |
+| --- | --- |
+| Groups | `SettingsGroupsSection.jsx` (new) |
+| Budgets | `BudgetsSection.jsx` — also `/budgets` |
+| Scan | `ScanSettingsSection.jsx` — also `/scan-settings` |
+| How to Use | `GuideSection.jsx` — also `/guide` |
+| Updates | `SettingsUpdatesSection.jsx` (new) |
+| About | `AboutSection.jsx` — also `/about` |
+
+The four with a standalone route too are shared components rather than two
+copies to keep in sync — the routes stay around for existing deep links
+elsewhere in the app (Your Stats' "Manage budgets →", the scan button's
+"change" link).
+
+Sign Out (`src/lib/signOut.js`) and leaving a group from either entry point
+(`src/lib/leaveGroup.js`) are both pulled into shared `lib/` functions for
+the same reason — GroupSettings' own member-list "Leave" and the Groups
+section's "⋮ → Leave group" need to do the exact same thing, snapshot
+included (see "How the data model works" below), not two copies that could
+quietly drift apart.
+
+Sign Out and Leave Group both confirm via a bottom sheet
+(`ConfirmSheet.jsx`) — a deliberately different pattern from the app's
+existing centered `.modal-panel` dialogs (the multi-payer split, delete-all-
+bills), which stay as they are; this one's for a plain yes/no with nothing
+else to show.
+
+## Updates section, and the service worker
+
+`registerType` in `vite.config.js` is `'prompt'`, not `'autoUpdate'` — a
+newly-deployed version installs in the background but waits until
+something explicitly activates it, via `useRegisterSW()`
+(`virtual:pwa-register/react`). `PwaUpdater.jsx`, mounted once at the app's
+root, is what actually registers the service worker on load, independent
+of whether anyone ever opens Settings; `SettingsUpdatesSection.jsx` calls
+the same hook again for its own local "check, then show a checkmark or a
+Reload button" UI — registering twice is harmless
+(`navigator.serviceWorker.register()` is idempotent), and keeps that
+component self-contained. `"Check for updates"` calls
+`registration.update()` to force an on-demand check rather than waiting
+for the browser's own infrequent one.
+
+`src/lib/appVersion.js` holds `APP_VERSION` and a short `WHATS_NEW` list —
+bump both by hand with each PR (same convention as the version chip in
+`AppHeader.jsx`, which now imports from here too).
+
+## Add to home screen
+
+`InstallPrompt.jsx`, also mounted at the app's root, shows a small one-time
+shelf the first time anyone opens Spesa in a browser tab that fires
+`beforeinstallprompt` (Chromium-based — Chrome/Edge, desktop or Android) —
+captured instead of letting the browser show its own default mini-infobar,
+and remembered in `localStorage` so it never asks twice. Safari (iOS and
+macOS) never fires this event at all, so the banner simply never appears
+there — no hand-rolled "Share → Add to Home Screen" instructions for it
+yet.
 
 ## Currency
 
@@ -308,12 +369,17 @@ Each category has a color, shown as a small dot wherever the category
 appears — a 10-color preset plus the browser's own picker for anything else,
 changeable any time from Group Settings.
 
-## Spending thresholds
+## Budgets
 
 A personal (not group) monthly budget per category, set at **Settings →
-Spending thresholds** — profile-level since you're very possibly in more
-than one group. Categories with the same name (trimmed, case-insensitive)
-across every group you're in share one budget.
+Budgets** — profile-level since you're very possibly in more than one
+group. Categories with the same name (trimmed, case-insensitive) across
+every group you're in share one budget.
+
+Renamed from "Spending thresholds" in the UI — kept as "threshold"
+internally (state names, the `spending_thresholds` table, `lib/thresholds.js`)
+to avoid a database migration and a much wider rename for no visible
+benefit; only user-facing copy changed.
 
 Shows as a progress bar on **Your Stats** (`/stats`) once set — always
 compared to the *current calendar month*, regardless of whatever period Your
@@ -348,12 +414,14 @@ navigation](#keyboard-navigation).
   land on one specific week.
 - **A shared default period** — every stats page opens on your saved default
   (out of the box, Month). Browse to a different tab and a "Set \_\_\_ as
-  default" link appears; it's one preference, not one per page — changing it
-  anywhere changes it everywhere.
-- **Where thresholds sit on Your Stats** — pinned to the very top or very
-  bottom of the page (never mid-page), since thresholds are always
-  this-month regardless of the selector while everything else on the page
-  moves with it. A per-device toggle, no obviously-correct default.
+  default" link appears, or set it directly from Settings → Profile; it's
+  one preference, not one per page — changing it anywhere changes it
+  everywhere.
+- **Where Budgets sits on Your Stats** — pinned to the very top or very
+  bottom of the page (never mid-page), since budgets are always this-month
+  regardless of the selector while everything else on the page moves with
+  it. A per-device toggle (also settable from Settings → Profile), no
+  obviously-correct default.
 - **Recent history loads first** — this year plus last year's bills load up
   front for an instant render; the rest backfills in the background. A small
   note shows if you page back (or check "All time") before that finishes.
@@ -467,7 +535,7 @@ image service involved.
 The **Personal** tab on the groups list (`/`) opens a single-member group
 that's just yours — auto-created the first time you open the tab, no setup
 step. It's a real group under the hood (`groups.is_personal`), so
-categories, thresholds, receipt scanning, recurring bills, stats, and CSV
+categories, budgets, receipt scanning, recurring bills, stats, and CSV
 export all just work; only Invite, "paid by"/"split with" pickers, and
 Settle Up are hidden, since there's never anyone but you in it. It folds
 into "Your Stats" automatically, same as any other group.
@@ -625,7 +693,7 @@ Setting up a Recurring Bill by hand, from Group Settings, is unaffected.)
 
 ## The in-app guide
 
-`/guide` (also reachable from the account menu as "How to use") is a
+`/guide` (also reachable from Settings as "How to Use") is a
 searchable set of collapsible sections covering the whole app — worth
 keeping in sync as features land; it's one file, `src/pages/Guide.jsx`, each
 section self-contained.
@@ -815,7 +883,7 @@ project, built as time and interest allow:
 - Settlement/category-totals math moved into a Postgres function, if a
   genuinely large group ever needs it beyond what client-side computation
   and caching already handle
-- Group-level (shared) spending thresholds, alongside the personal ones that
+- Group-level (shared) budgets, alongside the personal ones that
   exist today
 - AI-assisted category suggestions during a scan itself
 - Push notifications, once usage patterns make them worth the noise
@@ -853,14 +921,14 @@ project, built as time and interest allow:
 - `admin_id` changes are only ever made through `transfer_admin()` in the
   app's own code — the RLS policy itself is a blanket per-row check, so it
   can't stop a raw API call from changing it directly
-- Spending thresholds only cover the current calendar month, no history view
+- Budgets only cover the current calendar month, no history view
 - A snapshot recorded before category tracking existed has no category
   breakdown for its days, only the original totals
 - The budget indicator only shows on Your Stats, not any single group's own
   stats page
 - Cross-group category merging can rarely split into two entries if a
-  category's exact casing changes elsewhere *after* a threshold's been
-  saved for it — re-saving it under the new casing fixes it
+  category's exact casing changes elsewhere *after* a budget's been saved
+  for it — re-saving it under the new casing fixes it
 - Category totals aren't reflected in recap text, PDFs, or CSV export yet —
   those still just show items and prices
 

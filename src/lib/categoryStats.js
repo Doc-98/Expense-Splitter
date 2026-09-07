@@ -25,8 +25,8 @@ export function computeCategoryTotals({ bills, items }) {
 }
 
 // One person's own proportional share of spending per category *name* —
-// the money math behind spending thresholds (see src/pages/Thresholds.jsx
-// and the "By category" budgets on Your Stats). Two things make this
+// the money math behind budgets (see src/pages/Budgets.jsx and the "By
+// category" budgets on Your Stats). Two things make this
 // different from computeCategoryTotals above: it's scoped to one person's
 // item_shares allocation rather than an item's whole total_price, and it
 // buckets by category *name* (trimmed, case-insensitive) rather than

@@ -193,7 +193,7 @@ export default function AccountStats() {
               supabase.from('bills').select(BILLS_SELECT, { count: 'exact' }).in('group_id', groupIds).gte('created_at', windowStart.toISOString())
             )
           : Promise.resolve([]),
-        // For the "Spending thresholds" section below — every category
+        // For the "Budgets" section below — every category
         // across every group I'm in (so same-named tags from different
         // groups can be merged, see mergeCategoriesByName).
         groupIds.length
@@ -312,10 +312,10 @@ export default function AccountStats() {
   const { start, end, label, yearLabel } = getPeriodRange(granularity, offset)
   const { bills, items, itemShares } = filterByDateRange(rawBills, rawItems, rawShares, start, end)
 
-  // Spending thresholds are always compared against the current calendar
-  // month specifically, independent of whatever period this page's own
-  // selector is showing above (see Thresholds.jsx for why) — a separate,
-  // fixed date range from the granularity/offset-driven one above.
+  // Budgets are always compared against the current calendar month
+  // specifically, independent of whatever period this page's own selector
+  // is showing above (see Budgets.jsx for why) — a separate, fixed date
+  // range from the granularity/offset-driven one above.
   const thisMonth = getPeriodRange('month', 0)
   const monthFiltered = filterByDateRange(rawBills, rawItems, rawShares, thisMonth.start, thisMonth.end)
   const myParticipantIds = new Set(myParticipantByGroup.values())
@@ -542,9 +542,11 @@ export default function AccountStats() {
   // says — top (above the period selector) or bottom (after everything
   // else) — never in the middle, since every other section on this page
   // moves with the period selector and this one deliberately doesn't.
+  // (Variable/preference names here stay "threshold" — see
+  // statsPreferences.js — only the heading and links say "Budgets" now.)
   const thresholdsSection = thresholdRows.length > 0 && (
     <>
-      <h2 className="settings-section-title">Spending thresholds</h2>
+      <h2 className="settings-section-title">Budgets</h2>
       <div className="stats-bars">
         {thresholdRows.map((t) => (
           <div key={t.key} className="stats-bar-row">
@@ -569,7 +571,7 @@ export default function AccountStats() {
       </div>
       <p className="muted stats-note">
         Always this calendar month, and always your own share — not scoped to the period
-        selected above. <Link to="/thresholds">Manage thresholds →</Link>{' · '}
+        selected above. <Link to="/budgets">Manage budgets →</Link>{' · '}
         <button type="button" className="btn-link" onClick={toggleThresholdsPosition}>
           {thresholdsPosition === 'top' ? 'Show at bottom instead' : 'Show at top instead'}
         </button>

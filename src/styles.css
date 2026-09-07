@@ -124,8 +124,11 @@ code {
   font-size: 11px;
   font-weight: 400;
 }
-.account-menu { position: relative; }
+/* Now a plain Link straight into Settings (see AppHeader.jsx) rather than
+   a button opening a dropdown — kept the same pill look, just needs an
+   anchor's own defaults reset the way .icon-btn already does below. */
 .account-chip {
+  display: inline-block;
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: 999px;
@@ -133,26 +136,12 @@ code {
   font-size: 13px;
   font-weight: 500;
   color: var(--ink);
+  text-decoration: none;
   cursor: pointer;
 }
-.account-dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-sm) var(--space-md);
-  min-width: 180px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  z-index: 10;
-}
-.account-email {
-  font-size: 12px;
-  color: var(--ink-soft);
-  margin: 0 0 6px;
-  word-break: break-all;
-}
+/* .dropdown-item/.dropdown-item-warn stay — BillActionsMenu.jsx's own "⋮"
+   popover still uses them, independent of the account dropdown they were
+   first built for (now gone). */
 .dropdown-item {
   display: block;
   width: 100%;
@@ -395,6 +384,9 @@ code {
   text-decoration: none;
 }
 .icon-btn:hover { background: var(--accent-light); color: var(--accent-dark); }
+/* Marks an icon-button toggle as currently "on" — so far just Settings'
+   own hamburger, tinted while its expanded nav is showing. */
+.icon-btn.active-toggle { background: var(--accent-light); color: var(--accent-dark); }
 
 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft); margin-bottom: var(--space-sm); }
 
@@ -517,6 +509,10 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   text-overflow: ellipsis;
   max-width: 320px;
 }
+/* "(admin)" next to a group's name in Settings' Groups list — same idea as
+   GroupSettings.jsx's own member-list admin label, just inline with a
+   title instead of a whole row. */
+.role-tag { font-size: 12px; font-weight: 500; color: var(--accent-dark); }
 
 /* Right side of a bill row: the total/personal-status block, then
    whichever trailing control the row actually has (the chevron, or the
@@ -688,6 +684,33 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 }
 .bill-menu-btn:hover { color: var(--ink); }
 .bill-menu-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px var(--space-md);
+  min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  z-index: 10;
+}
+
+/* Same "⋮" pattern as .bill-menu-* above, under its own name rather than
+   reused directly — this one's on the Settings page's Groups list (see
+   SettingsGroupsSection.jsx), not a bill row. */
+.row-menu-wrap { position: relative; }
+.row-menu-btn {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.row-menu-btn:hover { color: var(--ink); }
+.row-menu-popover {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
@@ -1826,3 +1849,179 @@ input.item-editable-input, textarea.item-editable-input {
 .pie-chart-legend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pie-chart-legend-amount { flex-shrink: 0; }
 .pie-chart-legend-percent { flex-shrink: 0; width: 36px; text-align: right; }
+
+/* ---------- Settings page ---------- */
+/* Breaks out of .page's own horizontal padding so the nav rail and the
+   vertical divider between it and content can run flush to both edges,
+   the way a settings sidebar reads as one — .settings-nav/.settings-content
+   each carry their own inner padding back in below instead. */
+.settings-shell {
+  display: flex;
+  align-items: flex-start;
+  margin: 0 calc(var(--space-md) * -1);
+}
+.settings-nav {
+  width: 52px;
+  flex-shrink: 0;
+  background: var(--surface-tint);
+  border-right: 1px solid var(--border);
+  padding: var(--space-sm) 6px var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Stays in view as the content column scrolls past it, same idea as
+     .pagination staying anchored while everything else moves — nav is
+     short and fixed (7 sections + Sign Out), content can run much longer. */
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  transition: width 0.15s ease;
+}
+.settings-shell.expanded .settings-nav { width: 148px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  justify-content: center;
+}
+.settings-shell.expanded .nav-item { justify-content: flex-start; }
+.nav-item .label {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.settings-shell.expanded .nav-item .label { display: inline; }
+.nav-item:hover { background: var(--border); }
+.nav-item.active { background: var(--accent-light); color: var(--accent-dark); }
+.nav-spacer { flex: 1; }
+.nav-item.signout {
+  color: var(--warn);
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding-top: 14px;
+}
+.nav-item.signout:hover { background: var(--warn-light); }
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-md);
+}
+
+/* A row-count-scale "budget" glyph next to Settings' own version pill —
+   see version-row below — reusing the same font-family as everywhere else
+   numbers line up (mono, tabular by nature). */
+.version-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: var(--space-sm); }
+.version-pill { font-size: 14px; background: var(--surface-tint); padding: 3px 10px; border-radius: 999px; }
+.whats-new { list-style: none; margin: var(--space-sm) 0 var(--space-lg); padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.whats-new li { font-size: 13.5px; padding-left: 18px; position: relative; line-height: 1.5; }
+.whats-new li::before { content: '—'; position: absolute; left: 0; color: var(--accent); }
+.update-check-box { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-md); }
+.update-check-btn { margin-top: 10px; }
+.update-status { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-top: 10px; min-height: 20px; }
+.update-ok { color: var(--accent-dark); font-weight: 600; }
+.update-available { color: var(--warn); font-weight: 600; }
+
+/* ---------- Bottom-sheet confirm (Sign out, Leave group) ---------- */
+/* A deliberately separate pattern from .modal-backdrop/.modal-panel above
+   — see ConfirmSheet.jsx for why: those stay a centered dialog, this one
+   slides up from the bottom for the two, lighter, plain yes/no confirms
+   that don't carry enough content to need the full modal treatment. */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+.sheet-panel {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: var(--space-lg) var(--space-lg) calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  max-width: 480px;
+  animation: sheet-up 0.18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel { animation: none; }
+}
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  margin: -6px auto 14px;
+}
+.sheet-panel h2 { font-family: var(--font-display); font-size: 18px; margin: 0 0 8px; }
+.sheet-panel p { font-size: 14px; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+.sheet-actions { display: flex; justify-content: flex-end; gap: var(--space-md); margin-top: var(--space-lg); }
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ---------- Install prompt ---------- */
+/* A one-time floating shelf (see InstallPrompt.jsx) — anchored to the
+   bottom of the viewport like .pagination, but position: fixed rather
+   than sticky since this has no "natural" place in any page's flow to
+   fall back to; it can appear over any route at all. */
+.install-banner {
+  position: fixed;
+  left: var(--space-md);
+  right: var(--space-md);
+  bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+}
+.install-banner-mark {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.install-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.install-banner-text strong { font-size: 13.5px; }
+.install-banner-text .muted { font-size: 12px; margin: 0; }
+.install-banner-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.install-banner-dismiss:hover { color: var(--ink); }

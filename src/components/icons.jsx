@@ -76,3 +76,107 @@ export function BackArrowIcon({ size = 20, ...props }) {
     </svg>
   )
 }
+
+// The plain three-bar "hamburger" — toggles the Settings page's own side
+// nav open/closed (see SettingsNav.jsx). Not reused for anything else; the
+// account menu this used to open no longer exists (see AppHeader.jsx).
+export function MenuIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// ---------- Settings nav icons ----------
+// One glyph per section in SettingsNav.jsx — grouped here together since
+// they only ever appear side by side in that one rail, and share a
+// slightly lighter visual weight (opacity-based fills instead of solid
+// ones) than the header's own Share/Stats/Settings icons above, so a full
+// column of them doesn't compete with the section content next to it.
+
+export function ProfileIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="2" />
+      <path d="M4.5 20c0-3.9 3.4-6.8 7.5-6.8s7.5 2.9 7.5 6.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function GroupsNavIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="2" />
+      <path d="M3 19.2c0-3.2 2.7-5.6 6-5.6s6 2.4 6 5.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="17.3" cy="8" r="2.4" stroke="currentColor" strokeWidth="1.6" opacity="0.55" />
+      <path d="M15 13.6c2.4.5 4.2 2.4 4.6 4.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity="0.55" />
+    </svg>
+  )
+}
+
+// Bars with a dashed cap line — spending (the bars) measured against a
+// budget (the line), rather than a generic wallet/coin glyph that says
+// "money" without saying "a limit on money."
+export function BudgetIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M3 4h18" stroke="currentColor" strokeWidth="1.6" strokeDasharray="1 3" strokeLinecap="round" />
+      <rect x="4" y="15" width="5" height="6" rx="1" fill="currentColor" opacity="0.35" />
+      <rect x="10.5" y="9" width="5" height="12" rx="1" fill="currentColor" />
+      <rect x="17" y="12" width="5" height="9" rx="1" fill="currentColor" opacity="0.35" />
+    </svg>
+  )
+}
+
+export function ScanIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <rect x="2.5" y="7" width="19" height="13" rx="2.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 7l1.4-2.4h5.2L16 7" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="13.6" r="3.6" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
+
+export function GuideIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M12 6.2c-1.9-1.4-4.6-1.8-7-1.2v13.4c2.4-.6 5.1-.2 7 1.2 1.9-1.4 4.6-1.8 7-1.2V5c-2.4-.6-5.1-.2-7 1.2z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M12 6.2v13.4" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  )
+}
+
+export function UpdatesIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M20 12a8 8 0 10-2.7 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M20.5 6.5V12h-5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function AboutIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="8.3" r="1.15" fill="currentColor" />
+      <path d="M12 11.3v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function SignOutIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M9 4H6.5a2 2 0 00-2 2v12a2 2 0 002 2H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M20 12H9.5M15.5 8l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
