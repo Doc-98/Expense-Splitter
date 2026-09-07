@@ -24,10 +24,11 @@ const GROUPS = [
               Or join an existing one via an invite link.
             </p>
             <p>
-              On a group's page, the <strong>Invite</strong> button opens a QR code (great for
-              someone standing right next to you) and a <strong>Share invite link</strong> option
-              that uses your phone's normal share menu — straight into WhatsApp, Messages,
-              wherever, or copies the link if sharing isn't available.
+              <strong>Invite</strong> lives in Group Settings, next to Members — it opens a QR
+              code (great for someone standing right next to you) and a{' '}
+              <strong>Share invite link</strong> option that uses your phone's normal share menu
+              — straight into WhatsApp, Messages, wherever, or copies the link if sharing isn't
+              available.
             </p>
           </>
         ),
@@ -340,8 +341,9 @@ const GROUPS = [
         body: (
           <>
             <p>
-              Both a single bill and a group's settle-up have a <strong>Share recap</strong>{' '}
-              button — tap it for a small menu with the two ways to get it out:
+              A single bill, and a group's page (the share icon next to Stats and Settings), each
+              have a <strong>Share</strong> button — tap it for a small menu with every way to get
+              that data out:
             </p>
             <ul>
               <li>
@@ -352,14 +354,13 @@ const GROUPS = [
                 <strong>Download as PDF</strong> — opens your browser's print dialog; choose
                 "Save as PDF."
               </li>
+              <li>
+                <strong>Export as CSV</strong> — a spreadsheet-friendly file rather than a
+                human-readable recap. A bill's own CSV is one row per item; a group's is one row
+                per item across every bill in the group, with the date, bill, category, and who
+                paid, so it can be opened in a spreadsheet or backed up outside the app.
+              </li>
             </ul>
-            <p>
-              A bill also has a separate <strong>Export CSV</strong> button next to the share
-              menu, for a spreadsheet-friendly file rather than a human-readable recap. A group's
-              settle-up recap has the same button for its own CSV export — one row per item
-              across every bill in the group, with the date, bill, category, and who paid, so it
-              can be opened in a spreadsheet or backed up outside the app.
-            </p>
           </>
         ),
       },

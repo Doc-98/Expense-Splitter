@@ -23,11 +23,11 @@ import { groupItemsByDate } from '../lib/dateGroups'
 import { buildGroupCsvRows, toCsv, downloadCsv } from '../lib/csv'
 import SettlementSummary from '../components/SettlementSummary'
 import ShareButton from '../components/ShareButton'
-import InviteMenu from '../components/InviteMenu'
 import Pagination from '../components/Pagination'
 import BillActionsMenu from '../components/BillActionsMenu'
 import RangeSlider from '../components/RangeSlider'
 import { PrintableSettlementRecap } from '../components/PrintableRecap'
+import { SearchIcon, PieChartIcon, SettingsIcon } from '../components/icons'
 
 const BILLS_PAGE_SIZE = 15
 
@@ -80,6 +80,12 @@ export default function GroupView() {
   const [payments, setPayments] = useState([])
   const [error, setError] = useState(null)
   const [selectMode, setSelectMode] = useState(false)
+  // Select mode's only entry point is now a bill's own "..." menu (see
+  // enterSelectModeWith below) — there's no dedicated "Select bills" button
+  // anymore, so Escape (same convention as search/filters above) is what
+  // lets someone back out of it without hunting for the bulk-select bar's
+  // own Cancel.
+  useEscapeKey(() => toggleSelectMode(), selectMode)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [shareStatus, setShareStatus] = useState(null)
   // { [billId]: { [memberId]: { paid, consumed } } } — computed alongside
@@ -643,9 +649,10 @@ export default function GroupView() {
     reloadAll()
   }
 
-  // Entry point for the per-bill menu's own "Select" action — lands in the
-  // exact same state as opening selection mode via the list's own "Select"
-  // toggle and then ticking this one row by hand.
+  // Entry point for the per-bill menu's own "Select" action — the only way
+  // into select mode now (see toggleSelectMode's own comment). Lands in
+  // the same state as entering select mode and then ticking this one row
+  // by hand.
   function enterSelectModeWith(billId) {
     setSelectMode(true)
     setSelectedIds(new Set([billId]))
@@ -722,59 +729,81 @@ export default function GroupView() {
           ← Groups
         </Link>
         <h1>{group?.name}</h1>
-        <Link to={`/groups/${groupId}/stats`} className="btn-link">
-          Stats
+        {/* Share/Stats/Settings, grouped together as icon-only controls —
+            Share here is the group-level action (settle-up recap text/PDF,
+            merged with the CSV export that used to sit in its own button
+            further down the page, see ShareButton's onExportCsv). Gated
+            the same way that bottom section used to be: something to
+            share only exists once settlement itself has loaded, and only
+            actually offers anything once there's either a settle-up to
+            share (any real group) or bills to export (personal included). */}
+        {settlement && (!group?.is_personal || (bills && bills.length > 0)) && (
+          <ShareButton
+            icon
+            menuAlign="right"
+            label={group?.is_personal ? 'Export' : 'Share settle-up'}
+            title={!group?.is_personal ? `Settle up — ${group?.name}` : undefined}
+            getText={
+              !group?.is_personal
+                ? () => formatSettlementRecap(group?.name, settlement, allMembers, format)
+                : undefined
+            }
+            onExportCsv={bills && bills.length > 0 ? exportGroupCsv : undefined}
+          />
+        )}
+        <Link to={`/groups/${groupId}/stats`} className="icon-btn" aria-label="Stats" title="Stats">
+          <PieChartIcon />
         </Link>
-        <Link to={`/groups/${groupId}/settings`} className="btn-link">
-          Settings
+        <Link to={`/groups/${groupId}/settings`} className="icon-btn" aria-label="Settings" title="Settings">
+          <SettingsIcon />
         </Link>
       </header>
 
       {error && <p className="status-error">{error}</p>}
 
       <div className="group-actions">
-        {/* Invite (and, further down, the whole Settle Up section) only
-            ever means something once there's someone else who could owe or
-            be owed — a personal space is you and only ever you, so both
-            are skipped entirely rather than shown pointlessly empty. */}
+        {/* Invite moved to Group Settings, near Members — the member
+            count/popover below is the quick-glance version, still worth
+            keeping right here. A personal space is you and only ever you,
+            so the whole "who's in this group" row is skipped rather than
+            shown pointlessly empty. */}
         {!group?.is_personal && (
-          <>
-            <InviteMenu
-              inviteUrl={group ? `${window.location.origin}/join/${group.invite_code}` : ''}
-              groupName={group?.name}
-            />
-            <div className="member-count-wrap" ref={memberPopoverRef}>
-              <button type="button" className="member-count-btn" onClick={() => setShowMembers((s) => !s)}>
-                {activeMembers.length} {activeMembers.length === 1 ? 'person' : 'people'}
-              </button>
-              {showMembers && (
-                <div className="member-count-popover">
-                  <ul>
-                    {activeMembers.map((m) => (
-                      <li key={m.id}>
-                        {m.name}
-                        {m.isGuest && <span className="muted"> (guest)</span>}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link to={`/groups/${groupId}/settings`} className="btn-link">
-                    Manage members →
-                  </Link>
-                </div>
-              )}
-            </div>
-          </>
+          <div className="member-count-wrap" ref={memberPopoverRef}>
+            <button type="button" className="member-count-btn" onClick={() => setShowMembers((s) => !s)}>
+              {activeMembers.length} {activeMembers.length === 1 ? 'person' : 'people'}
+            </button>
+            {showMembers && (
+              <div className="member-count-popover">
+                <ul>
+                  {activeMembers.map((m) => (
+                    <li key={m.id}>
+                      {m.name}
+                      {m.isGuest && <span className="muted"> (guest)</span>}
+                    </li>
+                  ))}
+                </ul>
+                <Link to={`/groups/${groupId}/settings`} className="btn-link">
+                  Manage members →
+                </Link>
+              </div>
+            )}
+          </div>
         )}
         {/* Hidden once the search section itself is open — its own ↑
             (below) is what closes it again, so there's never two controls
-            on screen at once for the same thing. */}
+            on screen at once for the same thing. Icon-only — this only
+            ever opens the search box, it doesn't itself "apply" anything
+            (filtering already happens live as you type), so it never
+            needed a verb as a label to begin with. */}
         {bills && bills.length > 0 && !searchOpen && (
           <button
             type="button"
             className={`btn-secondary bill-search-toggle ${searchQuery || filtersActive ? 'bill-search-toggle-active' : ''}`}
             onClick={() => setSearchOpen(true)}
+            aria-label="Search bills"
+            title="Search bills"
           >
-            Search{searchQuery || filtersActive ? ' •' : ''}
+            <SearchIcon size={16} />
           </button>
         )}
       </div>
@@ -889,23 +918,13 @@ export default function GroupView() {
         </button>
       </form>
 
-      <div className="bill-list-controls">
-        {bills && bills.length > 0 && (
-          <button type="button" className="btn-link" onClick={toggleSelectMode}>
-            {selectMode ? 'Cancel' : 'Select bills'}
-          </button>
-        )}
-        {/* Several rounds of pill-button styling (colored, two-line,
-            single-line, every size in between) all ended up either too
-            big or too fussy next to "Add" — a secondary, occasional
-            action doesn't need button chrome at all. Plain text, same
-            style as "Select bills" right next to it (.btn-link), pinned
-            to the opposite edge of the same row — matches that link's own
-            visual weight instead of competing with "Add" for it. */}
-        <Link to={`/groups/${groupId}/recurring`} className="btn-link recurring-bills-btn">
-          Add recurring bill ↻
-        </Link>
-      </div>
+      {/* Select mode's only entry point now — the list's own top-level
+          toggle (and the "Add recurring bill" link that used to sit next
+          to it) are gone; a per-bill "..." menu's own "Select" action
+          (enterSelectModeWith) is enough on its own, and one fewer
+          always-on button in this row is exactly the kind of clutter this
+          round is trying to cut. Recurring bills now has its own link in
+          Group Settings. */}
 
       {selectMode && (
         <div className="bulk-select-bar">
@@ -926,6 +945,9 @@ export default function GroupView() {
               onClick={deleteSelectedBills}
             >
               Delete selected
+            </button>
+            <button type="button" className="btn-link" onClick={toggleSelectMode}>
+              Cancel
             </button>
           </div>
           {allBillsSelected && !isAdmin && (
@@ -1050,32 +1072,14 @@ export default function GroupView() {
         />
       )}
 
-      {settlement && (
-        <>
-          <div className="section-divider" />
-          <div className="recap-actions">
-            {/* A settle-up recap is meaningless with nobody to settle up
-                with — but the CSV export is exactly as useful for a
-                personal space as for a real group, so that half of this
-                row stays. */}
-            {!group?.is_personal && (
-              <ShareButton
-                label="Share settle-up"
-                title={`Settle up — ${group?.name}`}
-                getText={() => formatSettlementRecap(group?.name, settlement, allMembers, format)}
-              />
-            )}
-            {bills && bills.length > 0 && (
-              <>
-                {!group?.is_personal && <span className="recap-divider" />}
-                <button type="button" className="btn-secondary" onClick={exportGroupCsv}>
-                  Export CSV
-                </button>
-              </>
-            )}
-          </div>
-        </>
-      )}
+      {/* Share settle-up + Export CSV both moved up into the page header
+          (see the icon-only ShareButton next to Stats/Settings) — this
+          used to be its own row down here with the same two actions.
+          PrintableSettlementRecap still needs to render somewhere on the
+          page for that header button's "Download as PDF" to have
+          anything to print; it doesn't need to sit visually next to the
+          button that triggers it. */}
+      {settlement && <div className="section-divider" />}
       {!group?.is_personal && (
         <PrintableSettlementRecap groupName={group?.name} transactions={settlement} members={allMembers} />
       )}

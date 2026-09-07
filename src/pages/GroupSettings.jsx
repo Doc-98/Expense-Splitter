@@ -24,6 +24,7 @@ import { fetchDraft } from '../lib/bankImportDrafts'
 import TypedConfirmModal from '../components/TypedConfirmModal'
 import ColorSwatchPicker from '../components/ColorSwatchPicker'
 import CategoryColorButton from '../components/CategoryColorButton'
+import InviteMenu from '../components/InviteMenu'
 
 export default function GroupSettings() {
   const { groupId } = useParams()
@@ -33,6 +34,9 @@ export default function GroupSettings() {
   const [name, setName] = useState('')
   const [adminId, setAdminId] = useState(null)
   const [isPersonal, setIsPersonal] = useState(false)
+  // Only ever needed for InviteMenu below — every other field this page
+  // manages already had its own bit of state before this one did.
+  const [inviteCode, setInviteCode] = useState('')
   const [members, setMembers] = useState([])
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(false)
@@ -62,6 +66,7 @@ export default function GroupSettings() {
     setName(data?.name || '')
     setAdminId(data?.admin_id || null)
     setIsPersonal(data?.is_personal || false)
+    setInviteCode(data?.invite_code || '')
   }, [groupId])
 
   const loadMembers = useCallback(async () => {
@@ -413,7 +418,10 @@ export default function GroupSettings() {
           groups table). */}
       {!isPersonal && (
         <>
-      <h2 className="settings-section-title">Members ({activeRealMembers.length})</h2>
+      <div className="settings-section-title-row">
+        <h2 className="settings-section-title">Members ({activeRealMembers.length})</h2>
+        <InviteMenu inviteUrl={inviteCode ? `${window.location.origin}/join/${inviteCode}` : ''} groupName={name} />
+      </div>
       <ul className="member-list">
         {activeRealMembers.map((m) => {
           const isSelf = m.userId === user.id
@@ -604,6 +612,19 @@ export default function GroupSettings() {
           Add category
         </button>
       </form>
+
+      {/* Moved here from the group page's own bill-list controls — out of
+          the way for now; a better-integrated spot (surfacing due/upcoming
+          templates right on the group page, say) is future work, not this
+          round's. */}
+      <h2 className="settings-section-title">Recurring bills</h2>
+      <p className="muted">
+        Set up a bill (rent, a subscription, anything on a regular schedule) once and have it
+        generated for you automatically going forward.
+      </p>
+      <Link to={`/groups/${groupId}/recurring`} className="btn-link import-link">
+        Manage recurring bills →
+      </Link>
 
       <h2 className="settings-section-title">Import data</h2>
       <p className="muted">
