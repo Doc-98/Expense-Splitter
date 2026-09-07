@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { fetchGroupMembers } from '../lib/members'
@@ -13,6 +13,7 @@ import {
 } from '../lib/recurringBills'
 import { useCurrency } from '../context/CurrencyContext'
 import { parseNumber } from '../lib/parseNumber'
+import BackButton from '../components/BackButton'
 
 const FREQUENCY_LABELS = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }
 
@@ -132,9 +133,7 @@ export default function RecurringBills() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}`} />
         <h1>Recurring bills</h1>
       </header>
 

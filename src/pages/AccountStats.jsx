@@ -26,6 +26,7 @@ import TimeRangeSelector from '../components/TimeRangeSelector'
 import ComparisonBadge from '../components/ComparisonBadge'
 import ShareButton from '../components/ShareButton'
 import { PrintableAccountStatsRecap } from '../components/PrintableRecap'
+import BackButton from '../components/BackButton'
 
 function monthKey(dateStr) {
   const d = new Date(dateStr)
@@ -579,9 +580,7 @@ export default function AccountStats() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to="/" className="btn-link">
-          ← Groups
-        </Link>
+        <BackButton to="/" label="Groups" />
         <h1>Your stats</h1>
       </header>
 

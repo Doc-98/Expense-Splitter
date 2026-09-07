@@ -18,6 +18,7 @@ import TimeRangeSelector from '../components/TimeRangeSelector'
 import ComparisonBadge from '../components/ComparisonBadge'
 import ShareButton from '../components/ShareButton'
 import { PrintableGroupStatsRecap } from '../components/PrintableRecap'
+import BackButton from '../components/BackButton'
 
 function monthKey(dateStr) {
   const d = new Date(dateStr)
@@ -306,9 +307,7 @@ export default function GroupStats() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}`} />
         <div className="page-header-titles">
           <h1>Group Stats</h1>
           {groupName && <p className="page-header-subtitle">{groupName}</p>}

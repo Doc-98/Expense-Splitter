@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useCurrency } from '../context/CurrencyContext'
@@ -8,6 +8,7 @@ import { fetchAllRows } from '../lib/fetchAllRows'
 import { parseSplitwiseCsv, checkImportBalances } from '../lib/splitwiseImport'
 import { splitEvenly } from '../lib/splitEvenly'
 import MultiPayerModal from '../components/MultiPayerModal'
+import BackButton from '../components/BackButton'
 
 // Appended to a review-resolved (or skipped) bill's note, on top of the
 // ordinary "Imported from Splitwise (Category)" text — a permanent,
@@ -477,9 +478,7 @@ export default function ImportBills() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}`} />
         <h1>Import from Splitwise</h1>
       </header>
 

@@ -61,3 +61,18 @@ export function PieChartIcon({ size = 20, ...props }) {
     </svg>
   )
 }
+
+// The single "go back" glyph — replaces every "← Back"/"← Groups" text
+// link across the app (see BackButton.jsx, which wraps this in the same
+// .icon-btn treatment the header's Share/Stats/Settings icons already
+// use). A full shaft-plus-arrowhead rather than a bare chevron — matches
+// the visual weight of those other icons (all comparable stroke coverage),
+// so it reads clearly on its own without needing top-left position to
+// disambiguate it from, say, a collapse toggle.
+export function BackArrowIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

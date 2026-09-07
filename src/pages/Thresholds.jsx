@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import ThresholdsSection from '../components/ThresholdsSection'
+import BackButton from '../components/BackButton'
 
 // A thin page wrapper around ThresholdsSection — the actual UI/logic lives
 // there now, shared with its collapsed form on the Settings page. This
@@ -11,9 +12,7 @@ export default function Thresholds() {
   return (
     <div className="page">
       <header className="page-header">
-        <button type="button" className="btn-link" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <h1>Spending thresholds</h1>
       </header>
 

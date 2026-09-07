@@ -10,6 +10,7 @@ import { getReceiptSettings, setReceiptSettings } from '../lib/receiptSettings'
 import { buildTitleGroups, applyAiSuggestions } from '../lib/billCategorization/plan'
 import { classifyTitles, resolveClassifyStrategy } from '../lib/billCategorization'
 import { findKeywordClusters } from '../lib/billCategorization/keywordClusters'
+import BackButton from '../components/BackButton'
 
 // Supabase/Postgres queries have a practical limit on how many IDs belong
 // in one `.in(...)` — a single category can end up covering bills from
@@ -197,9 +198,7 @@ export default function CategorizeBills() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}/settings`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}/settings`} />
         <h1>Categorize bills</h1>
       </header>
 

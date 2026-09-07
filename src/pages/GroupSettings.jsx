@@ -25,6 +25,7 @@ import TypedConfirmModal from '../components/TypedConfirmModal'
 import ColorSwatchPicker from '../components/ColorSwatchPicker'
 import CategoryColorButton from '../components/CategoryColorButton'
 import InviteMenu from '../components/InviteMenu'
+import BackButton from '../components/BackButton'
 
 export default function GroupSettings() {
   const { groupId } = useParams()
@@ -397,9 +398,7 @@ export default function GroupSettings() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to={`/groups/${groupId}`} className="btn-link">
-          ← Back
-        </Link>
+        <BackButton to={`/groups/${groupId}`} />
         <h1>Group settings</h1>
       </header>
 

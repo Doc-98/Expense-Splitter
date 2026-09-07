@@ -13,7 +13,6 @@ import { recordGroupVisit } from '../lib/recentGroups'
 import { formatSettlementRecap, formatMultiBillRecap } from '../lib/recapText'
 import { shareOrCopyText } from '../lib/shareText'
 import { filterBills, billTotal } from '../lib/billFilters'
-import { useClickOutside } from '../lib/useClickOutside'
 import { useEscapeKey } from '../lib/useEscapeKey'
 import { isTypingTarget } from '../lib/isTypingTarget'
 import { useListKeyboardNav } from '../lib/useListKeyboardNav'
@@ -28,6 +27,7 @@ import BillActionsMenu from '../components/BillActionsMenu'
 import RangeSlider from '../components/RangeSlider'
 import { PrintableSettlementRecap } from '../components/PrintableRecap'
 import { SearchIcon, PieChartIcon, SettingsIcon } from '../components/icons'
+import BackButton from '../components/BackButton'
 
 const BILLS_PAGE_SIZE = 15
 
@@ -39,9 +39,6 @@ export default function GroupView() {
 
   const [group, setGroup] = useState(null)
   const [allMembers, setAllMembers] = useState([])
-  const [showMembers, setShowMembers] = useState(false)
-  const memberPopoverRef = useRef(null)
-  useClickOutside(memberPopoverRef, () => setShowMembers(false), showMembers)
   const [bills, setBills] = useState(null)
   // Mirrors `bills` for loadPaymentsAndSettlement below to read from,
   // rather than closing over `bills` directly — that function is handed
@@ -100,15 +97,14 @@ export default function GroupView() {
   // Collapsed by default — a search bar plus a filters panel is a lot of
   // screen real estate for something you might not touch for a while if
   // you're just adding bills and settling up, not digging through old
-  // ones. The "Search" button that opens it lives in .group-actions,
-  // alongside Invite; the section itself carries its own ↑ to retract
-  // (see the search section's JSX below), and "/" opens it too (see the
-  // keydown effect below), matching whichever way it was closed.
+  // ones. The search icon that opens it lives in .group-actions; the
+  // section itself carries its own ↑ to retract (see the search section's
+  // JSX below), and "/" opens it too (see the keydown effect below),
+  // matching whichever way it was closed.
   const [searchOpen, setSearchOpen] = useState(false)
-  // Same Escape-to-close convention as the filters panel just below (and
-  // every popover in the app, via useClickOutside) — an inline panel
-  // toggled by its own button, same shape as filtersOpen, so it gets the
-  // same treatment.
+  // Same Escape-to-close convention as the filters panel just below — an
+  // inline panel toggled by its own button, same shape as filtersOpen, so
+  // it gets the same treatment.
   useEscapeKey(() => setSearchOpen(false), searchOpen)
   // "/" jumps straight to this (see the keydown effect below), same
   // shortcut GitHub/Slack use for their own search boxes — so it needs a
@@ -132,7 +128,6 @@ export default function GroupView() {
   // silently widen a range someone already narrowed on purpose.
   const [priceRange, setPriceRange] = useState(null)
 
-  const activeMembers = allMembers.filter((m) => m.active)
   const priceBounds =
     bills && bills.length > 0 ? { min: 0, max: Math.max(1, Math.ceil(Math.max(...bills.map(billTotal)))) } : null
   const priceFilterActive = Boolean(
@@ -725,9 +720,7 @@ export default function GroupView() {
   return (
     <div className="page">
       <header className="page-header">
-        <Link to="/" className="btn-link">
-          ← Groups
-        </Link>
+        <BackButton to="/" label="Groups" />
         <h1>{group?.name}</h1>
         {/* Share/Stats/Settings, grouped together as icon-only controls —
             Share here is the group-level action (settle-up recap text/PDF,
@@ -762,33 +755,6 @@ export default function GroupView() {
       {error && <p className="status-error">{error}</p>}
 
       <div className="group-actions">
-        {/* Invite moved to Group Settings, near Members — the member
-            count/popover below is the quick-glance version, still worth
-            keeping right here. A personal space is you and only ever you,
-            so the whole "who's in this group" row is skipped rather than
-            shown pointlessly empty. */}
-        {!group?.is_personal && (
-          <div className="member-count-wrap" ref={memberPopoverRef}>
-            <button type="button" className="member-count-btn" onClick={() => setShowMembers((s) => !s)}>
-              {activeMembers.length} {activeMembers.length === 1 ? 'person' : 'people'}
-            </button>
-            {showMembers && (
-              <div className="member-count-popover">
-                <ul>
-                  {activeMembers.map((m) => (
-                    <li key={m.id}>
-                      {m.name}
-                      {m.isGuest && <span className="muted"> (guest)</span>}
-                    </li>
-                  ))}
-                </ul>
-                <Link to={`/groups/${groupId}/settings`} className="btn-link">
-                  Manage members →
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
         {/* Hidden once the search section itself is open — its own ↑
             (below) is what closes it again, so there's never two controls
             on screen at once for the same thing. Icon-only — this only
@@ -1074,12 +1040,14 @@ export default function GroupView() {
 
       {/* Share settle-up + Export CSV both moved up into the page header
           (see the icon-only ShareButton next to Stats/Settings) — this
-          used to be its own row down here with the same two actions.
-          PrintableSettlementRecap still needs to render somewhere on the
-          page for that header button's "Download as PDF" to have
-          anything to print; it doesn't need to sit visually next to the
-          button that triggers it. */}
-      {settlement && <div className="section-divider" />}
+          used to be its own row down here with the same two actions, and
+          its own divider above it. PrintableSettlementRecap still needs to
+          render somewhere on the page for that header button's "Download
+          as PDF" to have anything to print; it doesn't need to sit
+          visually next to the button that triggers it, and contributes no
+          visible spacing of its own (print-only). "Quick stats" below
+          already draws its own divider (.group-stats-preview-title) — a
+          second one here would just double up. */}
       {!group?.is_personal && (
         <PrintableSettlementRecap groupName={group?.name} transactions={settlement} members={allMembers} />
       )}

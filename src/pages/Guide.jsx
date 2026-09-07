@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 
 // Each section carries its own plain-text `keywords` separate from the JSX
 // body it renders — searching rendered JSX at runtime would be fragile;
@@ -578,9 +579,7 @@ export default function Guide() {
   return (
     <div className="page">
       <header className="page-header">
-        <button type="button" className="btn-link" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <h1>How to use Spesa</h1>
       </header>
 

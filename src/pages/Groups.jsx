@@ -10,6 +10,7 @@ import { getRecentGroupIds } from '../lib/recentGroups'
 import { warmUpTopGroups } from '../lib/prefetchGroup'
 import BootSplash from '../components/BootSplash'
 import { groupsListCache, GROUPS_LIST_CACHE_KEY } from '../lib/groupsListCache'
+import { PieChartIcon } from '../components/icons'
 
 const GROUPS_PAGE_SIZE = 10
 
@@ -181,8 +182,8 @@ export default function Groups() {
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Your groups</h1>
-        <Link to="/stats" className="btn-link">
-          Your stats
+        <Link to="/stats" className="icon-btn" aria-label="Your stats" title="Your stats">
+          <PieChartIcon />
         </Link>
       </div>
 
