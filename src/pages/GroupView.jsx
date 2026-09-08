@@ -18,6 +18,7 @@ import { isTypingTarget } from '../lib/isTypingTarget'
 import { useListKeyboardNav } from '../lib/useListKeyboardNav'
 import { useCurrency } from '../context/CurrencyContext'
 import { processDueRecurringBills } from '../lib/recurringBills'
+import { prefetchGroupSettings } from '../lib/prefetchGroupSettings'
 import { groupItemsByDate } from '../lib/dateGroups'
 import { getGroupViewPreferences } from '../lib/groupViewPreferences'
 import { buildGroupCsvRows, toCsv, downloadCsv } from '../lib/csv'
@@ -788,7 +789,17 @@ export default function GroupView() {
         <Link to={`/groups/${groupId}/stats`} className="icon-btn" aria-label="Stats" title="Stats">
           <PieChartIcon />
         </Link>
-        <Link to={`/groups/${groupId}/settings`} className="icon-btn" aria-label="Settings" title="Settings">
+        {/* Members/Guests/Categories/Subscriptions are the four Group
+            Settings tabs that hit the database — fired the instant this is
+            clicked, same reasoning (and pattern) as AppHeader.jsx's own
+            account chip warming Settings' Groups/Budgets sections. */}
+        <Link
+          to={`/groups/${groupId}/settings`}
+          className="icon-btn"
+          aria-label="Settings"
+          title="Settings"
+          onClick={() => prefetchGroupSettings(groupId)}
+        >
           <SettingsIcon />
         </Link>
       </header>

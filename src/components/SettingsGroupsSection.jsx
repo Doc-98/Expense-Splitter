@@ -3,7 +3,8 @@ import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClickOutside } from '../lib/useClickOutside'
 import { snapshotAndRemoveMember } from '../lib/leaveGroup'
-import { loadErrorMessage } from '../lib/loadErrorMessage'
+import { fetchSettingsGroupsRows } from '../lib/prefetchSettings'
+import { settingsGroupsCache, SETTINGS_GROUPS_CACHE_KEY } from '../lib/settingsGroupsCache'
 import { getGroupViewPreferences, setGroupViewPreferences } from '../lib/groupViewPreferences'
 import ConfirmSheet from './ConfirmSheet'
 
@@ -48,7 +49,14 @@ function GroupRowMenu({ onLeave }) {
 // opening that group first, not a replacement for it.
 export default function SettingsGroupsSection() {
   const { user } = useAuth()
-  const [groups, setGroups] = useState(null) // null = still loading
+  // Seeded straight from settingsGroupsCache when there's anything there —
+  // either from a prefetch fired the instant the account chip was clicked
+  // (see prefetchSettings.js/AppHeader.jsx) or a previous visit this
+  // session — so this section has real data to paint from its very first
+  // render instead of "Loading…" every single time, the same "paint from
+  // cache, then quietly revalidate" trick groupsListCache.js already gets
+  // Groups.jsx.
+  const [groups, setGroups] = useState(() => settingsGroupsCache.get(SETTINGS_GROUPS_CACHE_KEY) ?? null) // null = still loading
   const [error, setError] = useState(null)
   const [pendingLeave, setPendingLeave] = useState(null) // { id, name, memberId } | null
   const [leaving, setLeaving] = useState(false)
@@ -63,51 +71,14 @@ export default function SettingsGroupsSection() {
 
     async function load() {
       setError(null)
-      const { data: memberRows, error: memberError } = await supabase
-        .from('group_members')
-        .select('id, group_id')
-        .eq('user_id', user.id)
-        .eq('active', true)
-      if (memberError) {
-        if (!cancelled) setError(loadErrorMessage(memberError))
-        return
+      try {
+        const rows = await fetchSettingsGroupsRows(user.id)
+        if (cancelled) return
+        setGroups(rows)
+        settingsGroupsCache.set(SETTINGS_GROUPS_CACHE_KEY, rows)
+      } catch (err) {
+        if (!cancelled) setError(err.message)
       }
-
-      const memberIdByGroup = new Map((memberRows || []).map((r) => [r.group_id, r.id]))
-      const groupIds = [...memberIdByGroup.keys()]
-      if (groupIds.length === 0) {
-        if (!cancelled) setGroups([])
-        return
-      }
-
-      const [{ data: groupsData, error: groupsError }, { data: allMembers, error: countError }] = await Promise.all([
-        supabase.from('groups').select('id, name, admin_id').in('id', groupIds).eq('is_personal', false),
-        supabase.from('group_members').select('group_id').in('group_id', groupIds).eq('active', true),
-      ])
-      if (groupsError || countError) {
-        if (!cancelled) setError(loadErrorMessage(groupsError || countError))
-        return
-      }
-
-      const countByGroup = new Map()
-      for (const row of allMembers || []) {
-        countByGroup.set(row.group_id, (countByGroup.get(row.group_id) || 0) + 1)
-      }
-
-      const rows = (groupsData || [])
-        .map((g) => {
-          const memberId = memberIdByGroup.get(g.id)
-          return {
-            id: g.id,
-            name: g.name,
-            memberId,
-            isAdmin: memberId === g.admin_id,
-            memberCount: countByGroup.get(g.id) || 1,
-          }
-        })
-        .sort((a, b) => a.name.localeCompare(b.name))
-
-      if (!cancelled) setGroups(rows)
     }
 
     load()
@@ -133,7 +104,11 @@ export default function SettingsGroupsSection() {
         member: { id: pendingLeave.memberId, userId: user.id },
         categories: categoriesData || [],
       })
-      setGroups((gs) => gs.filter((g) => g.id !== pendingLeave.id))
+      setGroups((gs) => {
+        const next = gs.filter((g) => g.id !== pendingLeave.id)
+        settingsGroupsCache.set(SETTINGS_GROUPS_CACHE_KEY, next)
+        return next
+      })
       setPendingLeave(null)
     } catch (err) {
       setError(err.message)

@@ -3,16 +3,15 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClickOutside } from '../lib/useClickOutside'
-import { fetchGroupMembers } from '../lib/members'
-import { fetchCategories } from '../lib/categories'
 import {
-  fetchRecurringBills,
   addRecurringBill,
   updateRecurringBill,
   setRecurringBillActive,
   deleteRecurringBill,
   countRecurringBillOccurrences,
 } from '../lib/recurringBills'
+import { fetchGroupSubscriptionsData } from '../lib/prefetchGroupSettings'
+import { groupSubscriptionsCache } from '../lib/groupSubscriptionsCache'
 import { useCurrency } from '../context/CurrencyContext'
 import { parseNumber } from '../lib/parseNumber'
 
@@ -76,10 +75,17 @@ export default function GroupSubscriptionsSection() {
   const { user } = useAuth()
   const { format } = useCurrency()
 
-  const [members, setMembers] = useState([])
-  const [categories, setCategories] = useState([])
-  const [templates, setTemplates] = useState([])
-  const [isPersonal, setIsPersonal] = useState(false)
+  // Seeded straight from groupSubscriptionsCache when there's anything
+  // there — either a prefetch fired the instant the group page's own
+  // Settings (gear) icon was clicked (see prefetchGroupSettings.js/
+  // GroupView.jsx) or a previous visit this session. Deliberately its own
+  // cache, not shared with groupRosterCache — see groupSubscriptionsCache.js
+  // for why.
+  const cached = groupSubscriptionsCache.get(groupId)
+  const [members, setMembers] = useState(cached?.members ?? [])
+  const [categories, setCategories] = useState(cached?.categories ?? [])
+  const [templates, setTemplates] = useState(cached?.templates ?? [])
+  const [isPersonal, setIsPersonal] = useState(cached?.isPersonal ?? false)
   const [error, setError] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null) // { template, count, total } | null
   const [deleting, setDeleting] = useState(false)
@@ -101,11 +107,12 @@ export default function GroupSubscriptionsSection() {
   const formRef = useRef(null)
 
   const load = useCallback(async () => {
-    setMembers(await fetchGroupMembers(groupId))
-    setCategories(await fetchCategories(groupId))
-    setTemplates(await fetchRecurringBills(supabase, groupId))
-    const { data: groupData } = await supabase.from('groups').select('is_personal').eq('id', groupId).single()
-    setIsPersonal(groupData?.is_personal || false)
+    const data = await fetchGroupSubscriptionsData(groupId)
+    setMembers(data.members)
+    setCategories(data.categories)
+    setTemplates(data.templates)
+    setIsPersonal(data.isPersonal)
+    groupSubscriptionsCache.set(groupId, data)
   }, [groupId])
 
   useEffect(() => {

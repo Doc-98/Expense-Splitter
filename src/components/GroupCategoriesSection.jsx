@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchCategories, addCategory, renameCategory, deleteCategory, updateCategoryColor, CATEGORY_COLORS } from '../lib/categories'
+import { groupCategoriesCache } from '../lib/groupCategoriesCache'
 import ColorSwatchPicker from './ColorSwatchPicker'
 import CategoryColorButton from './CategoryColorButton'
 
 export default function GroupCategoriesSection() {
   const { groupId } = useParams()
 
-  const [categories, setCategories] = useState([])
+  // Seeded straight from groupCategoriesCache when there's anything there
+  // — either a prefetch fired the instant the group page's own Settings
+  // (gear) icon was clicked (see prefetchGroupSettings.js/GroupView.jsx)
+  // or a previous visit this session.
+  const [categories, setCategories] = useState(() => groupCategoriesCache.get(groupId) ?? [])
   const [error, setError] = useState(null)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0])
@@ -15,7 +20,9 @@ export default function GroupCategoriesSection() {
   const [editingCategoryName, setEditingCategoryName] = useState('')
 
   const loadCategories = useCallback(async () => {
-    setCategories(await fetchCategories(groupId))
+    const data = await fetchCategories(groupId)
+    setCategories(data)
+    groupCategoriesCache.set(groupId, data)
   }, [groupId])
 
   useEffect(() => {
@@ -53,11 +60,14 @@ export default function GroupCategoriesSection() {
   async function handleCategoryColorChange(categoryId, color) {
     setError(null)
     const previous = categories
-    setCategories((cats) => cats.map((c) => (c.id === categoryId ? { ...c, color } : c)))
+    const optimistic = categories.map((c) => (c.id === categoryId ? { ...c, color } : c))
+    setCategories(optimistic)
+    groupCategoriesCache.set(groupId, optimistic)
     try {
       await updateCategoryColor(categoryId, color)
     } catch (err) {
       setCategories(previous)
+      groupCategoriesCache.set(groupId, previous)
       setError(err.message)
     }
   }

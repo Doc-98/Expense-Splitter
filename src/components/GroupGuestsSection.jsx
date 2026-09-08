@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { fetchAllGroupMembers, addGuest, setGuestActive, renameGuest, requestClaimLink, deleteGuestPermanently } from '../lib/members'
+import { addGuest, setGuestActive, renameGuest, requestClaimLink, deleteGuestPermanently } from '../lib/members'
 import { shareOrCopyText } from '../lib/shareText'
+import { fetchGroupRosterData } from '../lib/prefetchGroupSettings'
+import { groupRosterCache } from '../lib/groupRosterCache'
 import TypedConfirmSheet from './TypedConfirmSheet'
 
 export default function GroupGuestsSection() {
   const { groupId } = useParams()
   const { user } = useAuth()
 
-  const [name, setName] = useState('')
-  const [adminId, setAdminId] = useState(null)
-  const [members, setMembers] = useState([])
+  // Seeded straight from groupRosterCache, shared with
+  // GroupMembersSection.jsx — see that file's own comment, and
+  // groupRosterCache.js for why the two tabs share one cache entry.
+  const cached = groupRosterCache.get(groupId)
+  const [name, setName] = useState(cached?.name ?? '')
+  const [adminId, setAdminId] = useState(cached?.adminId ?? null)
+  const [members, setMembers] = useState(cached?.members ?? [])
   const [error, setError] = useState(null)
   const [guestName, setGuestName] = useState('')
   const [editingGuestId, setEditingGuestId] = useState(null)
@@ -26,20 +31,22 @@ export default function GroupGuestsSection() {
   const myParticipantId = members.find((m) => m.userId === user.id)?.id
   const isAdmin = myParticipantId && myParticipantId === adminId
 
-  const loadGroup = useCallback(async () => {
-    const { data } = await supabase.from('groups').select('name, admin_id').eq('id', groupId).single()
-    setName(data?.name || '')
-    setAdminId(data?.admin_id || null)
-  }, [groupId])
-
-  const loadMembers = useCallback(async () => {
-    setMembers(await fetchAllGroupMembers(groupId))
+  const load = useCallback(async () => {
+    setError(null)
+    try {
+      const data = await fetchGroupRosterData(groupId)
+      setName(data.name)
+      setAdminId(data.adminId)
+      setMembers(data.members)
+      groupRosterCache.set(groupId, data)
+    } catch (err) {
+      setError(err.message)
+    }
   }, [groupId])
 
   useEffect(() => {
-    loadGroup()
-    loadMembers()
-  }, [loadGroup, loadMembers])
+    load()
+  }, [load])
 
   async function submitAddGuest(e) {
     e.preventDefault()
@@ -48,7 +55,7 @@ export default function GroupGuestsSection() {
     try {
       await addGuest(groupId, guestName.trim())
       setGuestName('')
-      loadMembers()
+      load()
     } catch (err) {
       setError(err.message)
     }
@@ -60,7 +67,7 @@ export default function GroupGuestsSection() {
     try {
       await renameGuest(memberId, editingGuestName.trim())
       setEditingGuestId(null)
-      loadMembers()
+      load()
     } catch (err) {
       setError(err.message)
     }
@@ -70,7 +77,7 @@ export default function GroupGuestsSection() {
     setError(null)
     try {
       await setGuestActive(member.id, active)
-      loadMembers()
+      load()
     } catch (err) {
       setError(err.message)
     }
@@ -105,7 +112,7 @@ export default function GroupGuestsSection() {
     try {
       await deleteGuestPermanently(deleteTarget.id)
       setDeleteTarget(null)
-      loadMembers()
+      load()
     } catch (err) {
       setError(err.message)
     } finally {

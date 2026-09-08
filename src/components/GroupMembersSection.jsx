@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { fetchAllGroupMembers } from '../lib/members'
 import { fetchCategories } from '../lib/categories'
 import { snapshotAndRemoveMember } from '../lib/leaveGroup'
+import { fetchGroupRosterData } from '../lib/prefetchGroupSettings'
+import { groupRosterCache } from '../lib/groupRosterCache'
 import InviteMenu from './InviteMenu'
 
 // Real accounts only — Guests moved to its own tab (see
@@ -18,10 +19,18 @@ export default function GroupMembersSection() {
   const { groupId } = useParams()
   const { user } = useAuth()
 
-  const [name, setName] = useState('')
-  const [adminId, setAdminId] = useState(null)
-  const [inviteCode, setInviteCode] = useState('')
-  const [members, setMembers] = useState([])
+  // Seeded straight from groupRosterCache when there's anything there —
+  // either a prefetch fired the instant the group page's own Settings
+  // (gear) icon was clicked (see prefetchGroupSettings.js/GroupView.jsx)
+  // or a previous visit this session — same "paint from cache, then
+  // quietly revalidate" trick groupViewCache.js already gets GroupView.jsx
+  // itself. Shared with GroupGuestsSection.jsx — see groupRosterCache.js's
+  // own comment for why that's one cache entry, not two.
+  const cached = groupRosterCache.get(groupId)
+  const [name, setName] = useState(cached?.name ?? '')
+  const [adminId, setAdminId] = useState(cached?.adminId ?? null)
+  const [inviteCode, setInviteCode] = useState(cached?.inviteCode ?? '')
+  const [members, setMembers] = useState(cached?.members ?? [])
   const [error, setError] = useState(null)
 
   // Derived from the roster this section already fetches for its own list,
@@ -31,21 +40,23 @@ export default function GroupMembersSection() {
   const myParticipantId = members.find((m) => m.userId === user.id)?.id
   const isAdmin = myParticipantId && myParticipantId === adminId
 
-  const loadGroup = useCallback(async () => {
-    const { data } = await supabase.from('groups').select('name, admin_id, invite_code').eq('id', groupId).single()
-    setName(data?.name || '')
-    setAdminId(data?.admin_id || null)
-    setInviteCode(data?.invite_code || '')
-  }, [groupId])
-
-  const loadMembers = useCallback(async () => {
-    setMembers(await fetchAllGroupMembers(groupId))
+  const load = useCallback(async () => {
+    setError(null)
+    try {
+      const data = await fetchGroupRosterData(groupId)
+      setName(data.name)
+      setAdminId(data.adminId)
+      setInviteCode(data.inviteCode)
+      setMembers(data.members)
+      groupRosterCache.set(groupId, data)
+    } catch (err) {
+      setError(err.message)
+    }
   }, [groupId])
 
   useEffect(() => {
-    loadGroup()
-    loadMembers()
-  }, [loadGroup, loadMembers])
+    load()
+  }, [load])
 
   async function makeAdmin(member) {
     if (
@@ -63,7 +74,7 @@ export default function GroupMembersSection() {
     if (transferError) {
       setError(transferError.message)
     } else {
-      loadGroup()
+      load()
     }
   }
 
@@ -87,7 +98,7 @@ export default function GroupMembersSection() {
     try {
       const categories = await fetchCategories(groupId)
       await snapshotAndRemoveMember({ groupId, groupName: name, member, categories })
-      loadMembers()
+      load()
     } catch (err) {
       setError(err.message)
     }
