@@ -19,6 +19,7 @@ import ComparisonBadge from '../components/ComparisonBadge'
 import ShareButton from '../components/ShareButton'
 import { PrintableGroupStatsRecap } from '../components/PrintableRecap'
 import BackButton from '../components/BackButton'
+import { LineChartIcon } from '../components/icons'
 
 function monthKey(dateStr) {
   const d = new Date(dateStr)
@@ -312,8 +313,8 @@ export default function GroupStats() {
           <h1>Group Stats</h1>
           {groupName && <p className="page-header-subtitle">{groupName}</p>}
         </div>
-        <Link to={`/groups/${groupId}/stats/graphs`} className="btn-link page-header-graphs-link">
-          See graphs →
+        <Link to={`/groups/${groupId}/stats/graphs`} className="icon-btn" aria-label="See graphs" title="See graphs">
+          <LineChartIcon />
         </Link>
       </header>
 

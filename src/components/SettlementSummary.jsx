@@ -1,6 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { parseNumber } from '../lib/parseNumber'
 import { useCurrency } from '../context/CurrencyContext'
+import Pagination from './Pagination'
+
+// Same page size as the bill list (GroupView.jsx) — no reason for these to
+// differ, and it keeps "how many rows before this paginates" one number to
+// remember across the app rather than two.
+const PAYMENTS_PAGE_SIZE = 15
 
 function RecordPaymentForm({ members, onRecordPayment }) {
   const [from, setFrom] = useState('')
@@ -52,7 +58,28 @@ export default function SettlementSummary({ transactions, members, payments, onR
   const { format } = useCurrency()
   const nameOf = (id) => members?.find((m) => m.id === id)?.name || 'Someone'
 
+  // Local to this component rather than lifted to GroupView — nothing
+  // outside this list cares which page of *history* is showing, unlike
+  // the bill list's own page state, which GroupView needs for other
+  // things (keyboard navigation, the row a realtime update should focus).
+  const [paymentsPage, setPaymentsPage] = useState(0)
+  const paymentsList = payments || []
+
+  // Same clamp bills' own pagination uses — deleting enough payments (or
+  // undoing one from the very last page) can leave `paymentsPage` pointing
+  // past the new last page, which would render as a blank list instead of
+  // snapping back to somewhere real.
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(paymentsList.length / PAYMENTS_PAGE_SIZE) - 1)
+    if (paymentsPage > maxPage) setPaymentsPage(maxPage)
+  }, [paymentsList.length, paymentsPage])
+
   if (!transactions) return null
+
+  const visiblePayments = paymentsList.slice(
+    paymentsPage * PAYMENTS_PAGE_SIZE,
+    (paymentsPage + 1) * PAYMENTS_PAGE_SIZE
+  )
 
   return (
     <div className="settlement">
@@ -84,11 +111,11 @@ export default function SettlementSummary({ transactions, members, payments, onR
       <h3 className="payment-form-title section-divider">Record a payment</h3>
       <RecordPaymentForm members={members || []} onRecordPayment={onRecordPayment} />
 
-      {payments?.length > 0 && (
+      {paymentsList.length > 0 && (
         <details className="payment-history">
-          <summary>Payment history ({payments.length})</summary>
+          <summary>Payment history ({paymentsList.length})</summary>
           <ul className="settlement-list">
-            {payments.map((p) => (
+            {visiblePayments.map((p) => (
               <li key={p.id}>
                 <span className="debtor">{nameOf(p.from_member)}</span>
                 <span className="settlement-verb">paid</span>
@@ -107,6 +134,13 @@ export default function SettlementSummary({ transactions, members, payments, onR
               </li>
             ))}
           </ul>
+          <Pagination
+            page={paymentsPage}
+            setPage={setPaymentsPage}
+            totalItems={paymentsList.length}
+            pageSize={PAYMENTS_PAGE_SIZE}
+            floating={false}
+          />
         </details>
       )}
     </div>

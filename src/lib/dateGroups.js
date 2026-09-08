@@ -42,7 +42,16 @@ export function groupItemsByDate(items, dateKey = 'created_at') {
     if (dayKey !== currentDayKey) {
       currentDayGroup = {
         key: dayKey,
-        label: String(date.getDate()),
+        // A bare day number ("5") reads fine right under its own month
+        // header, but every day divider after the first in a month looks
+        // identical to one from any other month at a glance — easy to
+        // misread once you're mid-scroll and the actual month header
+        // isn't in view anymore. The month name's already implied by
+        // which section you're in, so just the short form here (matching
+        // BillView.jsx's own short-date style, minus the year — the
+        // month header right above already carries that) rather than
+        // spelling it out in full.
+        label: date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
         items: [],
       }
       currentMonthGroup.days.push(currentDayGroup)

@@ -434,8 +434,8 @@ dark mode — they won't follow you to a different device.
 
 A line chart of spending over time, plus a donut chart by category — a
 separate, lazy-loaded page (`AccountGraphs.jsx` / `GroupGraphs.jsx`) reached
-via "See graphs →" from either stats page, so nobody who never opens it pays
-anything for it.
+via the line-chart icon in either stats page's own header, so nobody who
+never opens it pays anything for it.
 
 Three tabs — **This month** (one point per day), **Last 4 months** and
 **This year** (one point per month; a finer per-week/per-bill tier was tried

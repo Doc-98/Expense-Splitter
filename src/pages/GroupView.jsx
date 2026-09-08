@@ -19,6 +19,7 @@ import { useListKeyboardNav } from '../lib/useListKeyboardNav'
 import { useCurrency } from '../context/CurrencyContext'
 import { processDueRecurringBills } from '../lib/recurringBills'
 import { groupItemsByDate } from '../lib/dateGroups'
+import { getGroupViewPreferences } from '../lib/groupViewPreferences'
 import { buildGroupCsvRows, toCsv, downloadCsv } from '../lib/csv'
 import SettlementSummary from '../components/SettlementSummary'
 import ShareButton from '../components/ShareButton'
@@ -36,6 +37,7 @@ export default function GroupView() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { format } = useCurrency()
+  const { showQuickStats, showLentBorrowedStatus } = getGroupViewPreferences()
 
   const [group, setGroup] = useState(null)
   const [allMembers, setAllMembers] = useState([])
@@ -967,6 +969,7 @@ export default function GroupView() {
                             personal user doesn't already know. */}
                         {group &&
                           !group.is_personal &&
+                          showLentBorrowedStatus &&
                           (net === null ? (
                             <span className="bill-amount-status bill-amount-status-neutral">
                               You are not involved
@@ -1052,20 +1055,21 @@ export default function GroupView() {
         <PrintableSettlementRecap groupName={group?.name} transactions={settlement} members={allMembers} />
       )}
 
-      <h2 className="settings-section-title group-stats-preview-title">Quick stats</h2>
-      <div className="stats-summary">
-        <div className="stats-summary-item">
-          <span className="stats-summary-value mono">{format(weekTotal)}</span>
-          <span className="muted">this week</span>
-        </div>
-        <div className="stats-summary-item">
-          <span className="stats-summary-value mono">{format(monthTotal)}</span>
-          <span className="muted">this month</span>
-        </div>
-      </div>
-      <Link to={`/groups/${groupId}/stats`} className="btn-link see-stats-link">
-        See full stats →
-      </Link>
+      {showQuickStats && (
+        <>
+          <h2 className="settings-section-title group-stats-preview-title">Quick stats</h2>
+          <div className="stats-summary">
+            <div className="stats-summary-item">
+              <span className="stats-summary-value mono">{format(weekTotal)}</span>
+              <span className="muted">this week</span>
+            </div>
+            <div className="stats-summary-item">
+              <span className="stats-summary-value mono">{format(monthTotal)}</span>
+              <span className="muted">this month</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -27,6 +27,7 @@ import ComparisonBadge from '../components/ComparisonBadge'
 import ShareButton from '../components/ShareButton'
 import { PrintableAccountStatsRecap } from '../components/PrintableRecap'
 import BackButton from '../components/BackButton'
+import { LineChartIcon } from '../components/icons'
 
 function monthKey(dateStr) {
   const d = new Date(dateStr)
@@ -584,11 +585,10 @@ export default function AccountStats() {
       <header className="page-header">
         <BackButton to="/" label="Groups" />
         <h1>Your stats</h1>
+        <Link to="/stats/graphs" className="icon-btn" aria-label="See graphs" title="See graphs">
+          <LineChartIcon />
+        </Link>
       </header>
-
-      <Link to="/stats/graphs" className="btn-link see-stats-link">
-        See graphs →
-      </Link>
 
       {/* Rendered above the groups.length check below, not inside it — a
           failed load() leaves groups at its empty initial state, and that

@@ -175,7 +175,8 @@ const GROUPS = [
               green if you fronted more than your share, or <strong>"You are not
               involved"</strong> if you're neither paying nor assigned to anything on it. This is
               just about that one bill, separate from your overall balance with the group further
-              down the page.
+              down the page. Turn it off for every bill, in every group, from{' '}
+              <strong>Settings → Groups</strong> if you'd rather keep the list plainer.
             </p>
             <p>
               The <strong>⋮</strong> on any bill's row opens <strong>Select</strong>,{' '}
@@ -525,7 +526,7 @@ const GROUPS = [
         id: 'account-settings',
         title: 'The Settings page',
         keywords:
-          'currency dollar euro pound symbol dark mode light theme settings username display name rename profile budget threshold scan menu hamburger sign out leave group nav side',
+          'currency dollar euro pound symbol dark mode light theme settings username display name rename profile budget threshold scan menu hamburger sign out leave group nav side quick stats lent borrowed',
         body: (
           <>
             <p>
@@ -533,7 +534,9 @@ const GROUPS = [
               everything account-level, in one place, arranged into sections down a side menu:
               your own display name, dark mode, currency, and a saved default period for both
               stats pages (<strong>Profile</strong>); the groups you're in, with a way to leave one
-              directly (<strong>Groups</strong>); a personal monthly budget per category
+              directly, plus two display switches covering every group's page at once — Quick
+              stats, and each bill's own "You lent/borrowed" line
+              (<strong>Groups</strong>); a personal monthly budget per category
               (<strong>Budgets</strong>); how receipts get scanned (<strong>Scan</strong>); this
               guide; what changed in the version you're running, with a way to check for a newer
               one (<strong>Updates</strong>); and what the app is (<strong>About</strong>).
