@@ -39,7 +39,18 @@ export function advanceDate(date, frequency, targetDay) {
 // actually protecting against a realistic input.
 export function computeDueOccurrences(nextDueDate, frequency, dayOfMonth, asOf) {
   const dueDates = []
-  let current = new Date(nextDueDate)
+  // nextDueDate normally arrives as a bare "YYYY-MM-DD" string straight out
+  // of Postgres (see processDueRecurringBills below) — parsed as `new
+  // Date(nextDueDate)` directly, that's midnight *UTC*, not midnight local,
+  // while `asOf` (today, at local midnight) and every other date in this
+  // file are always local. In any timezone ahead of UTC, that UTC midnight
+  // sits a few hours *later* than local midnight the same calendar day, so
+  // a template due "today" compared as `current <= asOf` came out false for
+  // the entire day — the first occurrence silently didn't fire until the
+  // day after it was actually due. Appending T00:00:00 forces the same
+  // local-midnight parse as everywhere else (addRecurringBill's
+  // `${startDate}T00:00:00`, the template list's own next-due display).
+  let current = typeof nextDueDate === 'string' ? new Date(`${nextDueDate}T00:00:00`) : new Date(nextDueDate)
   let iterations = 0
 
   while (current <= asOf && iterations < 1000) {
@@ -190,6 +201,28 @@ export async function addRecurringBill(supabase, groupId, userId, template) {
 
 export async function setRecurringBillActive(supabase, templateId, active) {
   const { error } = await supabase.from('recurring_bills').update({ active }).eq('id', templateId)
+  if (error) throw error
+}
+
+// Deliberately narrower than addRecurringBill's shape — only the content of
+// what gets generated (title/amount/category/who paid/who splits it), never
+// frequency or day_of_month. Those two are the schedule's own anchor:
+// next_due_date already in the database was computed from them, and
+// changing either here without also reconciling that column is exactly the
+// kind of edit that silently corrupts a template's future occurrences.
+// Delete and recreate covers "I want this on a different schedule" already,
+// with none of that risk.
+export async function updateRecurringBill(supabase, templateId, template) {
+  const { error } = await supabase
+    .from('recurring_bills')
+    .update({
+      title: template.title,
+      amount: template.amount,
+      category_id: template.categoryId || null,
+      paid_by: template.paidBy || null,
+      split_member_ids: template.splitMemberIds,
+    })
+    .eq('id', templateId)
   if (error) throw error
 }
 

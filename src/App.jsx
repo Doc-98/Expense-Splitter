@@ -21,7 +21,6 @@ import GroupSettings from './pages/GroupSettings'
 import GroupStats from './pages/GroupStats'
 import AccountStats from './pages/AccountStats'
 import ScanSettings from './pages/ScanSettings'
-import Budgets from './pages/Budgets'
 import Settings from './pages/Settings'
 
 // A one-time-use flow for most people — kept out of the main bundle
@@ -122,7 +121,6 @@ function Shell() {
           }
         />
         <Route path="/scan-settings" element={<RequireAuth><ScanSettings /></RequireAuth>} />
-        <Route path="/budgets" element={<RequireAuth><Budgets /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/" element={<RequireAuth><Groups /></RequireAuth>} />
         <Route path="/groups/:groupId" element={<RequireAuth><GroupView /></RequireAuth>} />

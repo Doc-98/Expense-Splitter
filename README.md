@@ -292,16 +292,17 @@ its own component, several of them shared:
 | Section | Component |
 | --- | --- |
 | Groups | `SettingsGroupsSection.jsx` (new) |
-| Budgets | `BudgetsSection.jsx` — also `/budgets` |
+| Budgets | `BudgetsSection.jsx` |
 | Scan | `ScanSettingsSection.jsx` — also `/scan-settings` |
 | How to Use | `GuideSection.jsx` — also `/guide` |
 | Updates | `SettingsUpdatesSection.jsx` (new) |
 | About | `AboutSection.jsx` — also `/about` |
 
-The four with a standalone route too are shared components rather than two
+The three with a standalone route too are shared components rather than two
 copies to keep in sync — the routes stay around for existing deep links
-elsewhere in the app (Your Stats' "Manage budgets →", the scan button's
-"change" link).
+elsewhere in the app (the scan button's "change" link). Budgets used to have
+one as well (`/budgets`, for Your Stats' own "Manage budgets →" link) — both
+are gone now that Settings → Budgets reaches the exact same component.
 
 Sign Out (`src/lib/signOut.js`) and leaving a group from either entry point
 (`src/lib/leaveGroup.js`) are both pulled into shared `lib/` functions for
@@ -413,15 +414,13 @@ navigation](#keyboard-navigation).
   and ‹‹‹/››› (a year) — a year-jump alone still left up to ~25 clicks to
   land on one specific week.
 - **A shared default period** — every stats page opens on your saved default
-  (out of the box, Month). Browse to a different tab and a "Set \_\_\_ as
-  default" link appears, or set it directly from Settings → Profile; it's
-  one preference, not one per page — changing it anywhere changes it
-  everywhere.
+  (out of the box, Month), set from Settings → Profile; it's one preference,
+  not one per page — changing it there changes it everywhere.
 - **Where Budgets sits on Your Stats** — pinned to the very top or very
   bottom of the page (never mid-page), since budgets are always this-month
   regardless of the selector while everything else on the page moves with
-  it. A per-device toggle (also settable from Settings → Profile), no
-  obviously-correct default.
+  it. A per-device toggle, set from Settings → Profile, no obviously-correct
+  default.
 - **Recent history loads first** — this year plus last year's bills load up
   front for an instant render; the rest backfills in the background. A small
   note shows if you page back (or check "All time") before that finishes.
@@ -473,6 +472,20 @@ A template for something that repeats (rent, a subscription) at
 generated occurrence is just an ordinary bill afterward, editable (including
 switching it to multiple payers) like any other.
 
+Each template row has a "⋮" menu — **Edit**, **Pause**/**Resume**, **Delete**
+— rather than the two buttons it used to be. **Edit** re-populates the same
+form used to create one (scrolled to and outlined so it's clear which
+template it's now pointed at) and re-submits through `updateRecurringBill()`
+instead of `addRecurringBill()`; it's deliberately narrower than creation,
+touching only what a generated bill *contains* (title, amount, category, who
+paid, who splits it), never **frequency** or **start date** — those anchor
+`next_due_date`/`day_of_month`, already stored and potentially already
+advanced past the original start date, so editing them after the fact risks
+silently corrupting future occurrences. Delete and recreate covers "I want
+this on a different schedule" instead. The "Add"/"Save changes" button stays
+disabled until title and amount are genuinely valid (and, in a real group,
+at least one person is still selected to split with).
+
 There's no scheduled job anywhere in this app: `processDueRecurringBills()`
 runs whenever anyone opens the group and creates whatever's due — every
 missed occurrence in order if the group's gone quiet a while, not just the
@@ -480,6 +493,15 @@ most recent one. A deliberate tradeoff against adding background
 infrastructure just for this; the honest cost is a bill appears when it's
 next generated, not exactly on its due date. Deleting a template asks
 whether to keep or delete the bills it's already generated.
+
+`computeDueOccurrences()` compares each template's `next_due_date` (a bare
+`"YYYY-MM-DD"` string straight out of Postgres) against local midnight
+today — it parses that string as local midnight itself (`` `${date}T00:00:00` ``),
+not via a bare `new Date(string)`, which JS parses as midnight *UTC*. Get
+that wrong and, in any timezone ahead of UTC, a template starting "today"
+silently doesn't fire its first occurrence until a day late (see
+`recurringBills.test.js`, which regression-tests this in a real subprocess —
+vitest's own worker pool doesn't honor a timezone change made mid-test).
 
 ## What a bill row shows
 
@@ -720,11 +742,26 @@ options, each only offered where it actually applies:
   a different format, not two different features.
 
 `ShareButton` itself supports an icon-only mode (`icon`), used for the
-group page's own trigger — the same component either way, just a glyph
-instead of a text label, with its own props for which of the three options
-above actually apply (`getText`/`title` gate the first two together;
-`onExportCsv` gates the third independently, since a personal space still
-wants CSV with nothing to "share as text").
+group page's own trigger and both stats pages' own headers (next to their
+"see graphs" icon) — the same component either way, just a glyph instead of
+a text label, with its own props for which of the three options above
+actually apply (`getText`/`title` gate the first two together;
+`onExportCsv` gates the third independently, so any group can offer all
+three at once).
+
+A personal space's share icon offers the exact same three options as a real
+group's — the underlying recap is just a different shape, since there's
+nobody to owe or be owed. `formatPersonalSpaceRecap()`/
+`PrintablePersonalSpaceRecap` share total spent, bill count, and a by-category
+breakdown, built entirely from `bills`/`categories` already sitting in
+`GroupView.jsx`'s own state (`GROUP_BILLS_SELECT` already carries each
+item's `total_price`/`category_id`) rather than a fresh fetch the way
+sharing one bill or a few selected ones does — `ShareButton`'s `getText` is
+called synchronously, and "Download as PDF" needs its printable content
+already in the DOM the instant `window.print()` fires, so neither has
+anywhere to `await` an on-demand round-trip. A full itemized transcript
+(needing each item's name/quantity, not just its total) stays exactly what
+selecting bills and sharing them from the list itself is for.
 
 ### Importing from Splitwise
 

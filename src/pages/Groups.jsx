@@ -10,7 +10,7 @@ import { getRecentGroupIds } from '../lib/recentGroups'
 import { warmUpTopGroups } from '../lib/prefetchGroup'
 import BootSplash from '../components/BootSplash'
 import { groupsListCache, GROUPS_LIST_CACHE_KEY } from '../lib/groupsListCache'
-import { PieChartIcon } from '../components/icons'
+import { PieChartIcon, ArrowRightIcon } from '../components/icons'
 
 const GROUPS_PAGE_SIZE = 10
 
@@ -221,14 +221,16 @@ export default function Groups() {
 
       <h2 className="settings-section-title section-always-divided">Create a new group</h2>
       <form onSubmit={createGroup} className="inline-form">
-        <input
-          value={newGroupName}
-          onChange={(e) => setNewGroupName(e.target.value)}
-          placeholder="New group name (e.g. Flat 3B)"
-        />
-        <button type="submit" className="btn-primary" disabled={creating}>
-          Create
-        </button>
+        <div className="input-with-submit">
+          <input
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            placeholder="New group name (e.g. Flat 3B)"
+          />
+          <button type="submit" className="input-submit-btn" disabled={creating || !newGroupName.trim()} aria-label="Create group">
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
       </form>
     </div>
   )

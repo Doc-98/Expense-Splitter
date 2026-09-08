@@ -8,12 +8,11 @@ import { parseNumber } from '../lib/parseNumber'
 const DEFAULT_NAME_KEYS = new Set(DEFAULT_CATEGORIES.map((c) => c.name.toLowerCase()))
 
 // The actual "budgets" (formerly "spending thresholds" — renamed in the UI,
-// see the Settings restructure) UI/logic, pulled out of what used to be
-// Budgets.jsx's whole page so it can be reused two ways: standalone at
-// /budgets (still there, for the existing deep links from AccountStats.jsx
-// and anywhere else that jumps straight here), and inline inside the
-// Settings page for anyone browsing in from there instead. Budgets.jsx
-// itself is now just this plus a page header — see it for that wrapper.
+// see the Settings restructure) UI/logic. Used to also be reachable
+// standalone at /budgets (a thin Budgets.jsx page wrapper, for a deep link
+// from Your Stats' own "Manage budgets →") — both are gone now that
+// Settings → Budgets is the only way in, and this is the only place the
+// UI/logic itself lives.
 // Kept internally as "threshold" throughout (state, the spending_thresholds
 // table, lib/thresholds.js) — only the user-facing copy changed, to avoid a
 // database migration and a much wider rename for no visible benefit.

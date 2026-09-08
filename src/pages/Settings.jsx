@@ -16,7 +16,17 @@ import SettingsUpdatesSection from '../components/SettingsUpdatesSection'
 import SettingsNav from '../components/SettingsNav'
 import ConfirmSheet from '../components/ConfirmSheet'
 import BackButton from '../components/BackButton'
-import { MenuIcon, ProfileIcon, GroupsNavIcon, BudgetIcon, ScanIcon, GuideIcon, UpdatesIcon, AboutIcon } from '../components/icons'
+import {
+  MenuIcon,
+  ProfileIcon,
+  GroupsNavIcon,
+  BudgetIcon,
+  ScanIcon,
+  GuideIcon,
+  UpdatesIcon,
+  AboutIcon,
+  ArrowRightIcon,
+} from '../components/icons'
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile', Icon: ProfileIcon },
@@ -29,19 +39,17 @@ const SECTIONS = [
 ]
 
 // Your name, dark mode, currency, and the two per-device stats preferences
-// that used to only be reachable from inside Your Stats itself
+// that used to also be settable from inline controls on Your Stats itself
 // (statsPreferences.js — the default period and where Budgets sits on that
-// page). Both still also work exactly as they did — the inline "Set ___ as
-// default" link, and the link right in Your Stats' own Budgets section —
-// this is just a second, more discoverable way to reach the same stored
-// preference, not a replacement for either.
+// page). Those inline controls (a "Set ___ as default" link, and a link in
+// Your Stats' own Budgets section toggling its position) are gone now —
+// this is the only place either preference is set from.
 function ProfileSection() {
   const { user, displayName, setDisplayName } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { code, setCurrency } = useCurrency()
 
   const [nameDraft, setNameDraft] = useState(displayName)
-  const [nameSaved, setNameSaved] = useState(false)
   const [nameError, setNameError] = useState(null)
   const [prefs, setPrefs] = useState(getStatsPreferences)
 
@@ -56,8 +64,11 @@ function ProfileSection() {
       return
     }
     setDisplayName(trimmed)
-    setNameSaved(true)
-    setTimeout(() => setNameSaved(false), 1500)
+    // Nothing to reset here — nameDraft already holds `trimmed` (or
+    // something whitespace-different from it), and displayName now matches
+    // it, so the submit button's disabled-until-changed guard below (see
+    // Groups.jsx/GroupView.jsx's own input-with-submit) fades it right back
+    // out on its own, no separate "Saved!" state needed.
   }
 
   function updatePref(partial) {
@@ -69,15 +80,22 @@ function ProfileSection() {
       <h2 className="settings-section-title">Your name</h2>
       <p className="muted">Shown to everyone in every group you're part of.</p>
       <form onSubmit={saveDisplayName} className="inline-form">
-        <input
-          value={nameDraft}
-          onChange={(e) => setNameDraft(e.target.value)}
-          placeholder="Your name"
-          maxLength={80}
-        />
-        <button type="submit" className="btn-primary" disabled={!nameDraft.trim()}>
-          {nameSaved ? 'Saved!' : 'Save'}
-        </button>
+        <div className="input-with-submit">
+          <input
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            placeholder="Your name"
+            maxLength={80}
+          />
+          <button
+            type="submit"
+            className="input-submit-btn"
+            disabled={!nameDraft.trim() || nameDraft.trim() === displayName}
+            aria-label="Save name"
+          >
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
       </form>
       {nameError && <p className="status-error">{nameError}</p>}
 

@@ -26,13 +26,20 @@ import ColorSwatchPicker from '../components/ColorSwatchPicker'
 import CategoryColorButton from '../components/CategoryColorButton'
 import InviteMenu from '../components/InviteMenu'
 import BackButton from '../components/BackButton'
+import { ArrowRightIcon } from '../components/icons'
 
 export default function GroupSettings() {
   const { groupId } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
 
+  // The group's actual current name — everywhere else on this page that
+  // shows or relies on it (InviteMenu, the claim-link share text, the
+  // delete-all-bills confirmation and its typed-name check) reads this,
+  // never nameDraft below, so an unsaved in-progress edit in the rename
+  // box can't leak into "type the group's name to confirm you mean it."
   const [name, setName] = useState('')
+  const [nameDraft, setNameDraft] = useState('')
   const [adminId, setAdminId] = useState(null)
   const [isPersonal, setIsPersonal] = useState(false)
   // Only ever needed for InviteMenu below — every other field this page
@@ -40,7 +47,6 @@ export default function GroupSettings() {
   const [inviteCode, setInviteCode] = useState('')
   const [members, setMembers] = useState([])
   const [error, setError] = useState(null)
-  const [saved, setSaved] = useState(false)
   const [guestName, setGuestName] = useState('')
   const [editingGuestId, setEditingGuestId] = useState(null)
   const [editingGuestName, setEditingGuestName] = useState('')
@@ -65,6 +71,7 @@ export default function GroupSettings() {
   const loadGroup = useCallback(async () => {
     const { data } = await supabase.from('groups').select('*').eq('id', groupId).single()
     setName(data?.name || '')
+    setNameDraft(data?.name || '')
     setAdminId(data?.admin_id || null)
     setIsPersonal(data?.is_personal || false)
     setInviteCode(data?.invite_code || '')
@@ -107,16 +114,18 @@ export default function GroupSettings() {
 
   async function saveName(e) {
     e.preventDefault()
-    if (!name.trim()) return
-    const { error: renameError } = await supabase
-      .from('groups')
-      .update({ name: name.trim() })
-      .eq('id', groupId)
+    const trimmed = nameDraft.trim()
+    if (!trimmed || trimmed === name) return
+    const { error: renameError } = await supabase.from('groups').update({ name: trimmed }).eq('id', groupId)
     if (renameError) {
       setError(renameError.message)
     } else {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 1500)
+      setName(trimmed)
+      // Nothing else to reset — nameDraft already holds `trimmed` (or
+      // something whitespace-different from it), and `name` now matches
+      // it, so the submit button's disabled-until-changed guard below
+      // fades it right back out on its own, same as Settings.jsx's own
+      // "Your name" field.
     }
   }
 
@@ -344,10 +353,17 @@ export default function GroupSettings() {
 
       <h2 className="settings-section-title">Group name</h2>
       <form onSubmit={saveName} className="inline-form">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Group name" />
-        <button type="submit" className="btn-primary">
-          {saved ? 'Saved!' : 'Save'}
-        </button>
+        <div className="input-with-submit">
+          <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Group name" />
+          <button
+            type="submit"
+            className="input-submit-btn"
+            disabled={!nameDraft.trim() || nameDraft.trim() === name}
+            aria-label="Save group name"
+          >
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
       </form>
 
       {/* Members, guests, and everything about who's in the group only

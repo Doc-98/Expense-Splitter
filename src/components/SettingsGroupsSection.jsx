@@ -144,36 +144,6 @@ export default function SettingsGroupsSection() {
 
   return (
     <>
-      <h2 className="settings-section-title">Display</h2>
-      <p className="muted">
-        Applies to every group's page alike, not one at a time — if you don't want these, you
-        almost certainly don't want them anywhere.
-      </p>
-      <div className="settings-row">
-        <span>Show Quick stats on the group page</span>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={prefs.showQuickStats}
-            onChange={(e) => updatePref({ showQuickStats: e.target.checked })}
-            aria-label="Show Quick stats on the group page"
-          />
-          <span className="switch-slider" />
-        </label>
-      </div>
-      <div className="settings-row">
-        <span>Show "You lent/borrowed" on each bill</span>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={prefs.showLentBorrowedStatus}
-            onChange={(e) => updatePref({ showLentBorrowedStatus: e.target.checked })}
-            aria-label="Show 'You lent' or 'You borrowed' status on each bill"
-          />
-          <span className="switch-slider" />
-        </label>
-      </div>
-
       <h2 className="settings-section-title">Your groups</h2>
       <p className="muted">
         Leaving a group here does the same thing as Leave in that group's own Settings — this is
@@ -204,6 +174,36 @@ export default function SettingsGroupsSection() {
           ))}
         </ul>
       )}
+
+      <h2 className="settings-section-title">Display</h2>
+      <p className="muted">
+        Applies to every group's page alike, not one at a time — if you don't want these, you
+        almost certainly don't want them anywhere.
+      </p>
+      <div className="settings-row">
+        <span>Show Quick stats on the group page</span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={prefs.showQuickStats}
+            onChange={(e) => updatePref({ showQuickStats: e.target.checked })}
+            aria-label="Show Quick stats on the group page"
+          />
+          <span className="switch-slider" />
+        </label>
+      </div>
+      <div className="settings-row">
+        <span>Show "You lent/borrowed" on each bill</span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={prefs.showLentBorrowedStatus}
+            onChange={(e) => updatePref({ showLentBorrowedStatus: e.target.checked })}
+            aria-label="Show 'You lent' or 'You borrowed' status on each bill"
+          />
+          <span className="switch-slider" />
+        </label>
+      </div>
 
       {pendingLeave && (
         <ConfirmSheet

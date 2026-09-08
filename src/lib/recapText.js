@@ -76,6 +76,32 @@ export function formatSettlementRecap(groupName, transactions, members, formatMo
   return lines.join('\n')
 }
 
+// The personal-space equivalent of formatSettlementRecap — there's nobody
+// to owe or be owed in a personal space, so "share" here means the same
+// short, always-current summary in spirit (total spent, by category)
+// rather than a per-bill itemized transcript. Deliberately built from
+// `recap` (the same shape PrintablePersonalSpaceRecap takes, computed once
+// by GroupView.jsx from whatever's already loaded — see that component's
+// own comment for why this can't fetch anything on demand the way sharing
+// one bill or a few selected ones does).
+export function formatPersonalSpaceRecap({ groupName, totalSpent, billCount, categoryRows }, formatMoney) {
+  const lines = [`*${groupName}*`, '']
+  if (billCount === 0) {
+    lines.push('No bills yet.')
+    return lines.join('\n')
+  }
+
+  lines.push(`Total spent: ${formatMoney(totalSpent)}`)
+  lines.push(`${billCount} bill${billCount === 1 ? '' : 's'}`)
+
+  if (categoryRows.length > 0) {
+    lines.push('', '*By category*')
+    for (const c of categoryRows) lines.push(`${c.name} — ${formatMoney(c.amount)}`)
+  }
+
+  return lines.join('\n')
+}
+
 // Both stats recaps below take their rows already fully resolved (names
 // looked up, month keys turned into labels, etc.) — GroupStats.jsx and
 // AccountStats.jsx both already have all of that on hand from what's on

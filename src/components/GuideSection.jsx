@@ -343,7 +343,9 @@ const GROUPS = [
             <p>
               A single bill, and a group's page (the share icon next to Stats and Settings), each
               have a <strong>Share</strong> button — tap it for a small menu with every way to get
-              that data out:
+              that data out. Your Personal space works the same way; since there's nobody else to
+              split with, its recap is total spent and a by-category breakdown instead of who owes
+              whom.
             </p>
             <ul>
               <li>
@@ -435,13 +437,11 @@ const GROUPS = [
               two extra pairs — ‹‹ / ›› for a month, ‹‹‹ / ››› for a year — since a year-jump
               alone still leaves a lot of clicking to land on the exact week you want. Every stats
               page — Your Stats and every group's own — opens on whichever period is your saved
-              default (a thin outline marks that tab) — browse to a different one and a small "Set
-              ___ as default" link appears to change it, or set it directly from{' '}
-              <strong>Settings → Profile</strong>. It's one shared default, not a separate one per
-              page: change it anywhere and both stats pages open on it. That, and where the
-              "Budgets" section sits on Your Stats (top or bottom of the page — a link right in
-              that section switches it, also mirrored in Settings → Profile), are both saved only
-              on this device, same as currency and dark mode.
+              default, set from <strong>Settings → Profile</strong>. It's one shared default, not a
+              separate one per page: change it there and both stats pages open on it. That, and
+              where the "Budgets" section sits on Your Stats (top or bottom of the page, also set
+              from Settings → Profile), are both saved only on this device, same as currency and
+              dark mode.
             </p>
             <p>
               On a group with a lot of history, both stats pages load the last year or two first so
@@ -550,10 +550,9 @@ const GROUPS = [
               right there, rather than navigating to a whole new page.
             </p>
             <p>
-              Budgets and Scan settings also still work as their own direct links from wherever
-              else the app already points at them (Your Stats' own Budgets section, wherever a
-              scan strategy is shown) — Settings collecting everything in one place doesn't take
-              that away.
+              Scan settings also still work as their own direct link from wherever else the app
+              already points at it (wherever a scan strategy is shown) — Settings collecting
+              everything in one place doesn't take that away.
             </p>
           </>
         ),

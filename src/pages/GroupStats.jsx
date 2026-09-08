@@ -11,7 +11,7 @@ import { computeCategoryTotals } from '../lib/categoryStats'
 import { getPeriodRange, filterByDateRange, getStatsWindowStart, isViewCovered } from '../lib/timeRange'
 import { deriveBillsItemsShares } from '../lib/deriveBillData'
 import { comparePeriods } from '../lib/periodComparison'
-import { getStatsPreferences, setStatsPreferences } from '../lib/statsPreferences'
+import { getStatsPreferences } from '../lib/statsPreferences'
 import { formatGroupStatsRecap } from '../lib/recapText'
 import { useCurrency } from '../context/CurrencyContext'
 import TimeRangeSelector from '../components/TimeRangeSelector'
@@ -55,11 +55,6 @@ export default function GroupStats() {
   // matter which stats page you land on.
   const [granularity, setGranularity] = useState(() => getStatsPreferences().defaultGranularity)
   const [offset, setOffset] = useState(0)
-  // Separate from `granularity` above (which changes as you browse around)
-  // so the TimeRangeSelector outline can move the instant "Set as default"
-  // is clicked, without needing a reload to reflect the new saved value —
-  // same reasoning as AccountStats.jsx.
-  const [defaultGranularity, setDefaultGranularity] = useState(() => getStatsPreferences().defaultGranularity)
   const [error, setError] = useState(null)
   // 'loading' until the background backfill (see load() below) finishes,
   // 'complete' once this group's full history is in rawBills, 'failed' if
@@ -72,11 +67,6 @@ export default function GroupStats() {
   const [historyWindowStart, setHistoryWindowStart] = useState(null)
 
   const nameOf = (id) => members.find((m) => m.id === id)?.name || 'Someone'
-
-  function handleSetDefaultGranularity(g) {
-    setStatsPreferences({ defaultGranularity: g })
-    setDefaultGranularity(g)
-  }
 
   const BILLS_SELECT =
     'id, title, created_at, paid_by, category_id, items(id, total_price, category_id, item_shares(member_id, shares)), bill_payers(member_id, amount)'
@@ -313,8 +303,18 @@ export default function GroupStats() {
           <h1>Group Stats</h1>
           {groupName && <p className="page-header-subtitle">{groupName}</p>}
         </div>
+        {/* Share (icon mode, same as GroupView.jsx's header) sits left of
+            Graphs — see the identical comment on AccountStats.jsx's own
+            header for why menuAlign="right". */}
+        <ShareButton
+          icon
+          menuAlign="right"
+          label="Share recap"
+          title={`Stats — ${groupName || 'group'}`}
+          getText={() => formatGroupStatsRecap(recap, format)}
+        />
         <Link to={`/groups/${groupId}/stats/graphs`} className="icon-btn" aria-label="See graphs" title="See graphs">
-          <LineChartIcon />
+          <LineChartIcon size={40} />
         </Link>
       </header>
 
@@ -334,8 +334,6 @@ export default function GroupStats() {
         setOffset={setOffset}
         label={label}
         yearLabel={yearLabel}
-        defaultGranularity={defaultGranularity}
-        onSetDefault={handleSetDefaultGranularity}
       />
 
       <div className="stats-summary">
@@ -463,13 +461,6 @@ export default function GroupStats() {
         </>
       )}
 
-      <div className="recap-actions">
-        <ShareButton
-          label="Share recap"
-          title={`Stats — ${groupName || 'group'}`}
-          getText={() => formatGroupStatsRecap(recap, format)}
-        />
-      </div>
       <PrintableGroupStatsRecap recap={recap} />
     </div>
   )
