@@ -62,6 +62,20 @@ export function PieChartIcon({ size = 20, ...props }) {
   )
 }
 
+// Replaces "See graphs →" (both stats pages) with an icon-only button,
+// matching the Share/Stats/Settings convention. A filled area under the
+// trend line rather than a bare line — echoes PieChartIcon's own
+// shaded-wedge treatment above, so the two read as one family of "stats"
+// icons rather than two unrelated glyphs picked separately.
+export function LineChartIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M3 17l5-6 4 3 8-9v13H3z" fill="currentColor" opacity="0.3" />
+      <path d="M3 17l5-6 4 3 8-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // The single "go back" glyph — replaces every "← Back"/"← Groups" text
 // link across the app (see BackButton.jsx, which wraps this in the same
 // .icon-btn treatment the header's Share/Stats/Settings icons already

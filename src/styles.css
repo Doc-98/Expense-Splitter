@@ -277,10 +277,6 @@ code {
    a direct flex child of .page-header anymore; this wrapper is. */
 .page-header-titles { flex: 1; min-width: 0; }
 .page-header-subtitle { margin: 2px 0 0; font-size: 13px; font-weight: 400; color: var(--ink-soft); }
-/* A "See ___" link living in the header row itself rather than below it
-   (unlike .see-stats-link, which is a standalone block underneath a
-   page's content) — just needs to not wrap awkwardly next to the title. */
-.page-header-graphs-link { flex-shrink: 0; white-space: nowrap; }
 
 .brand {
   font-family: var(--font-display);
@@ -1074,9 +1070,6 @@ input.item-editable-input, textarea.item-editable-input {
    "Settle up"/"Record a payment"), or for a bare divider between two rows
    of buttons with no heading at all. */
 .section-divider { margin-top: 40px; padding-top: var(--space-lg); border-top: 1px solid var(--border); }
-/* Right-aligned like a page corner turning, the usual place a "see more"
-   link like this sits. */
-.see-stats-link { display: block; text-align: right; margin-top: var(--space-sm); }
 
 .member-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .member-list-item {

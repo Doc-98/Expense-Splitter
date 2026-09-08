@@ -1063,9 +1063,6 @@ export default function GroupView() {
           <span className="muted">this month</span>
         </div>
       </div>
-      <Link to={`/groups/${groupId}/stats`} className="btn-link see-stats-link">
-        See full stats →
-      </Link>
     </div>
   )
 }
