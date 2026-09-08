@@ -396,11 +396,46 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .inline-form {
-  display: flex;
-  gap: var(--space-sm);
   margin-bottom: var(--space-lg);
 }
-.inline-form input { flex: 1; }
+
+/* A text input with its own submit control living inside it, right-aligned
+   — "Create a new group" (Groups.jsx) and "Add bill" (GroupView.jsx). The
+   button is genuinely `disabled` until the field holds at least one
+   non-whitespace character (both callers wire that up themselves), and
+   that's the only state this needs: opacity/scale key off `:disabled`
+   directly, so "invisible and unclickable while empty" and "fades in once
+   you start typing" are the same rule, not two things kept in sync. */
+.input-with-submit { position: relative; }
+.input-with-submit input {
+  width: 100%;
+  padding-right: 44px;
+}
+.input-submit-btn {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%) scale(0.8);
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.input-submit-btn:not(:disabled) { opacity: 1; transform: translateY(-50%) scale(1); }
+.input-submit-btn:disabled { pointer-events: none; }
+.input-submit-btn:active:not(:disabled) { transform: translateY(-50%) scale(0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .input-submit-btn { transition: none; }
+}
 
 /* ---------- Auth screen ---------- */
 .auth-screen {

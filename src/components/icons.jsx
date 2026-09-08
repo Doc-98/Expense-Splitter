@@ -91,6 +91,20 @@ export function BackArrowIcon({ size = 20, ...props }) {
   )
 }
 
+// Mirrors BackArrowIcon's shaft-plus-arrowhead, pointed the other way —
+// the inline submit glyph for "Create a new group" / "Add bill" (see the
+// `.input-with-submit` pattern in styles.css). A directional "go" glyph
+// rather than a checkmark: both of these forms navigate you straight into
+// what you just created, so "submit and go" is the more honest read than
+// "confirm."
+export function ArrowRightIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // The plain three-bar "hamburger" — toggles the Settings page's own side
 // nav open/closed (see SettingsNav.jsx). Not reused for anything else; the
 // account menu this used to open no longer exists (see AppHeader.jsx).

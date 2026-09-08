@@ -27,7 +27,7 @@ import Pagination from '../components/Pagination'
 import BillActionsMenu from '../components/BillActionsMenu'
 import RangeSlider from '../components/RangeSlider'
 import { PrintableSettlementRecap } from '../components/PrintableRecap'
-import { SearchIcon, PieChartIcon, SettingsIcon } from '../components/icons'
+import { SearchIcon, PieChartIcon, SettingsIcon, ArrowRightIcon } from '../components/icons'
 import BackButton from '../components/BackButton'
 
 const BILLS_PAGE_SIZE = 15
@@ -537,11 +537,12 @@ export default function GroupView() {
 
   async function createBill(e) {
     e.preventDefault()
+    if (!newBillTitle.trim()) return
     const { data, error: createError } = await supabase
       .from('bills')
       .insert({
         group_id: groupId,
-        title: newBillTitle.trim() || 'New bill',
+        title: newBillTitle.trim(),
         created_by: user.id,
         paid_by: myParticipantId,
       })
@@ -876,14 +877,16 @@ export default function GroupView() {
       )}
 
       <form onSubmit={createBill} className="inline-form">
-        <input
-          value={newBillTitle}
-          onChange={(e) => setNewBillTitle(e.target.value)}
-          placeholder="New bill (e.g. Lidl - Tuesday)"
-        />
-        <button type="submit" className="btn-primary">
-          Add
-        </button>
+        <div className="input-with-submit">
+          <input
+            value={newBillTitle}
+            onChange={(e) => setNewBillTitle(e.target.value)}
+            placeholder="New bill (e.g. Lidl - Tuesday)"
+          />
+          <button type="submit" className="input-submit-btn" disabled={!newBillTitle.trim()} aria-label="Add bill">
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
       </form>
 
       {/* Select mode's only entry point now — the list's own top-level
