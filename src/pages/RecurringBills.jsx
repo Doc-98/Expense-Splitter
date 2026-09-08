@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { useClickOutside } from '../lib/useClickOutside'
 import { fetchGroupMembers } from '../lib/members'
 import { fetchCategories } from '../lib/categories'
 import {
   fetchRecurringBills,
   addRecurringBill,
+  updateRecurringBill,
   setRecurringBillActive,
   deleteRecurringBill,
   countRecurringBillOccurrences,
@@ -16,6 +18,47 @@ import { parseNumber } from '../lib/parseNumber'
 import BackButton from '../components/BackButton'
 
 const FREQUENCY_LABELS = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }
+
+// The "⋮" per-row menu — same shape as SettingsGroupsSection.jsx's own
+// GroupRowMenu (and BillActionsMenu.jsx before that), just with three items
+// instead of one. Kept local to this page rather than its own component
+// file, same reasoning as GroupRowMenu: only ever used here.
+function TemplateMenu({ template, onEdit, onTogglePause, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+  useClickOutside(wrapRef, () => setOpen(false), open)
+
+  function run(action) {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div className="row-menu-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="row-menu-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={`Actions for ${template.title}`}
+      >
+        ⋮
+      </button>
+      {open && (
+        <div className="row-menu-popover">
+          <button type="button" className="dropdown-item" onClick={() => run(() => onEdit(template))}>
+            Edit
+          </button>
+          <button type="button" className="dropdown-item" onClick={() => run(() => onTogglePause(template))}>
+            {template.active ? 'Pause' : 'Resume'}
+          </button>
+          <button type="button" className="dropdown-item dropdown-item-warn" onClick={() => run(() => onDelete(template))}>
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function todayInputValue() {
   const d = new Date()
@@ -42,6 +85,14 @@ export default function RecurringBills() {
   const [splitMemberIds, setSplitMemberIds] = useState([])
   const [frequency, setFrequency] = useState('monthly')
   const [startDate, setStartDate] = useState(todayInputValue())
+  // The template currently being edited (its id), or null while the form
+  // below is in its normal "add a new one" mode — the exact same fields
+  // double as the edit form, just pre-filled and branching to
+  // updateRecurringBill instead of addRecurringBill on submit (see
+  // submitForm). Frequency/startDate aren't part of either state above
+  // that edit mode touches — see updateRecurringBill's own comment for why.
+  const [editingId, setEditingId] = useState(null)
+  const formRef = useRef(null)
 
   const load = useCallback(async () => {
     setMembers(await fetchGroupMembers(groupId))
@@ -70,22 +121,69 @@ export default function RecurringBills() {
     setSplitMemberIds((ids) => (ids.includes(memberId) ? ids.filter((id) => id !== memberId) : [...ids, memberId]))
   }
 
-  async function submitAdd(e) {
+  // Real gate on whether submitting would actually do anything — title and
+  // a genuinely positive amount always matter; the split-members check only
+  // applies to a real group (a personal space has nobody to split with, and
+  // hides that whole section). Category isn't checked separately: its
+  // select always holds a value (blank = "Uncategorized", a deliberate
+  // choice, not a placeholder), so it's already satisfied no matter what.
+  const canSubmit = Boolean(title.trim()) && parseNumber(amount) > 0 && (isPersonal || splitMemberIds.length > 0)
+
+  function resetToBlank() {
+    setTitle('')
+    setAmount('')
+    setCategoryId('')
+    setPaidBy(members[0]?.id || '')
+    setSplitMemberIds(members.map((m) => m.id))
+  }
+
+  function startEdit(template) {
+    setEditingId(template.id)
+    setTitle(template.title)
+    setAmount(String(template.amount))
+    setCategoryId(template.category_id || '')
+    setPaidBy(template.paid_by || '')
+    setSplitMemberIds(template.split_member_ids || [])
+    setError(null)
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    resetToBlank()
+  }
+
+  async function submitForm(e) {
     e.preventDefault()
-    if (!title.trim() || !amount || splitMemberIds.length === 0) return
+    if (!canSubmit) return
     setError(null)
     try {
-      await addRecurringBill(supabase, groupId, user.id, {
-        title: title.trim(),
-        amount: parseNumber(amount) || 0,
-        categoryId: categoryId || null,
-        paidBy: paidBy || null,
-        splitMemberIds,
-        frequency,
-        startDate: new Date(`${startDate}T00:00:00`),
-      })
-      setTitle('')
-      setAmount('')
+      if (editingId) {
+        await updateRecurringBill(supabase, editingId, {
+          title: title.trim(),
+          amount: parseNumber(amount) || 0,
+          categoryId: categoryId || null,
+          paidBy: paidBy || null,
+          splitMemberIds,
+        })
+        setEditingId(null)
+        resetToBlank()
+      } else {
+        await addRecurringBill(supabase, groupId, user.id, {
+          title: title.trim(),
+          amount: parseNumber(amount) || 0,
+          categoryId: categoryId || null,
+          paidBy: paidBy || null,
+          splitMemberIds,
+          frequency,
+          startDate: new Date(`${startDate}T00:00:00`),
+        })
+        // Category/paidBy/split deliberately left as they are, not reset —
+        // adding several similar templates in a row (e.g. multiple bills
+        // split the same way) shouldn't mean re-picking those every time.
+        setTitle('')
+        setAmount('')
+      }
       load()
     } catch (err) {
       setError(err.message)
@@ -118,6 +216,9 @@ export default function RecurringBills() {
     setError(null)
     try {
       await deleteRecurringBill(supabase, deleteTarget.template.id, deleteOccurrences)
+      // Deleting the template you're mid-edit on would otherwise leave the
+      // form silently pointed at an id that no longer exists.
+      if (deleteTarget.template.id === editingId) cancelEdit()
       setDeleteTarget(null)
       load()
     } catch (err) {
@@ -149,7 +250,10 @@ export default function RecurringBills() {
       {templates.length > 0 && (
         <ul className="member-list">
           {templates.map((t) => (
-            <li key={t.id} className={`member-list-item ${t.active ? '' : 'former'}`}>
+            <li
+              key={t.id}
+              className={`member-list-item ${t.active ? '' : 'former'} ${t.id === editingId ? 'row-editing' : ''}`}
+            >
               <span className="category-label">
                 {categoryNameOf(t.category_id) && (
                   <span
@@ -166,21 +270,14 @@ export default function RecurringBills() {
                   {!t.active && ' · paused'}
                 </span>
               </span>
-              <span className="member-list-actions">
-                <button type="button" className="btn-link" onClick={() => togglePause(t)}>
-                  {t.active ? 'Pause' : 'Resume'}
-                </button>
-                <button type="button" className="btn-link dropdown-item-warn" onClick={() => openDeleteConfirm(t)}>
-                  Delete
-                </button>
-              </span>
+              <TemplateMenu template={t} onEdit={startEdit} onTogglePause={togglePause} onDelete={openDeleteConfirm} />
             </li>
           ))}
         </ul>
       )}
 
-      <h2 className="settings-section-title">New recurring bill</h2>
-      <form onSubmit={submitAdd} className="recurring-form">
+      <h2 className="settings-section-title">{editingId ? 'Edit recurring bill' : 'New recurring bill'}</h2>
+      <form onSubmit={submitForm} className="recurring-form" ref={formRef}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Rent)" />
         <input
           value={amount}
@@ -215,20 +312,27 @@ export default function RecurringBills() {
           )}
         </div>
 
-        <div className="recurring-form-row">
-          <label className="muted">
-            Repeats
-            <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </label>
-          <label className="muted">
-            Starting
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </label>
-        </div>
+        {editingId ? (
+          <p className="muted">
+            Frequency and start date can't be changed here — delete the template and set up a new
+            one if the schedule itself needs to change.
+          </p>
+        ) : (
+          <div className="recurring-form-row">
+            <label className="muted">
+              Repeats
+              <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </label>
+            <label className="muted">
+              Starting
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </label>
+          </div>
+        )}
 
         {!isPersonal && (
           <>
@@ -248,9 +352,20 @@ export default function RecurringBills() {
           </>
         )}
 
-        <button type="submit" className="btn-primary">
-          Add recurring bill
-        </button>
+        <div className="recurring-form-actions">
+          <button type="submit" className="btn-primary recurring-submit-btn" disabled={!canSubmit}>
+            {editingId ? 'Save changes' : 'Add recurring bill'}
+          </button>
+          {/* Stands in for the button while it's faded out — same fields
+              gate both, so this only ever shows exactly when the button
+              itself isn't there to explain its own absence. */}
+          {!canSubmit && <span className="recurring-submit-hint">Fill in a title and an amount to continue</span>}
+          {editingId && (
+            <button type="button" className="btn-link" onClick={cancelEdit}>
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
 
       {deleteTarget && (

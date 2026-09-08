@@ -434,7 +434,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .input-submit-btn:disabled { pointer-events: none; }
 .input-submit-btn:active:not(:disabled) { transform: translateY(-50%) scale(0.9); }
 @media (prefers-reduced-motion: reduce) {
-  .input-submit-btn { transition: none; }
+  .input-submit-btn, .recurring-submit-btn { transition: none; }
 }
 
 /* ---------- Auth screen ---------- */
@@ -1731,6 +1731,21 @@ input.item-editable-input, textarea.item-editable-input {
 }
 .recurring-form-row select,
 .recurring-form-row input[type='date'] { font-size: 14px; }
+.recurring-form-actions { display: flex; align-items: center; gap: var(--space-md); }
+/* Same "genuinely disabled until valid" rule as Create group/Add bill's
+   own input-with-submit (see that comment in this file), adapted for a
+   button that can't live inside a single field — several fields gate it
+   at once, so it stays a normal labeled button at the end of the form
+   (its usual spot) rather than an icon docked in one of them, just fading
+   out instead of only dimming while canSubmit is false. */
+.recurring-submit-btn { transition: opacity 0.22s ease, transform 0.22s ease; }
+.btn-primary.recurring-submit-btn:disabled { opacity: 0; transform: translateY(4px); pointer-events: none; }
+.recurring-submit-hint { font-size: 12.5px; color: var(--ink-soft); }
+/* The row currently populating the form below — an accent outline, same
+   idea as GroupSettings.jsx's own "this row is mid-action" treatments,
+   so it's obvious at a glance which template "Edit recurring bill" is
+   actually pointed at once you've scrolled down to the form itself. */
+.member-list-item.row-editing { outline: 2px solid var(--accent); outline-offset: -1px; }
 
 /* ---------- Dual-thumb range slider (bill amount filter) ----------
    Two overlapping native range inputs rather than a library or a

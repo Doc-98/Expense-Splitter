@@ -472,6 +472,20 @@ A template for something that repeats (rent, a subscription) at
 generated occurrence is just an ordinary bill afterward, editable (including
 switching it to multiple payers) like any other.
 
+Each template row has a "⋮" menu — **Edit**, **Pause**/**Resume**, **Delete**
+— rather than the two buttons it used to be. **Edit** re-populates the same
+form used to create one (scrolled to and outlined so it's clear which
+template it's now pointed at) and re-submits through `updateRecurringBill()`
+instead of `addRecurringBill()`; it's deliberately narrower than creation,
+touching only what a generated bill *contains* (title, amount, category, who
+paid, who splits it), never **frequency** or **start date** — those anchor
+`next_due_date`/`day_of_month`, already stored and potentially already
+advanced past the original start date, so editing them after the fact risks
+silently corrupting future occurrences. Delete and recreate covers "I want
+this on a different schedule" instead. The "Add"/"Save changes" button stays
+disabled until title and amount are genuinely valid (and, in a real group,
+at least one person is still selected to split with).
+
 There's no scheduled job anywhere in this app: `processDueRecurringBills()`
 runs whenever anyone opens the group and creates whatever's due — every
 missed occurrence in order if the group's gone quiet a while, not just the
@@ -479,6 +493,15 @@ most recent one. A deliberate tradeoff against adding background
 infrastructure just for this; the honest cost is a bill appears when it's
 next generated, not exactly on its due date. Deleting a template asks
 whether to keep or delete the bills it's already generated.
+
+`computeDueOccurrences()` compares each template's `next_due_date` (a bare
+`"YYYY-MM-DD"` string straight out of Postgres) against local midnight
+today — it parses that string as local midnight itself (`` `${date}T00:00:00` ``),
+not via a bare `new Date(string)`, which JS parses as midnight *UTC*. Get
+that wrong and, in any timezone ahead of UTC, a template starting "today"
+silently doesn't fire its first occurrence until a day late (see
+`recurringBills.test.js`, which regression-tests this in a real subprocess —
+vitest's own worker pool doesn't honor a timezone change made mid-test).
 
 ## What a bill row shows
 
