@@ -1070,6 +1070,19 @@ input.item-editable-input, textarea.item-editable-input {
   border-top: none;
 }
 .group-stats-preview-title { margin-top: 40px; padding-top: var(--space-lg); border-top: 1px solid var(--border); }
+/* A lighter-weight heading for grouping a few related controls *within*
+   one .settings-section-title section — Danger Zone's "Delete all bills"
+   and "Delete group" each need their own explanation/button under one
+   roof, but don't each deserve a full section (with its own divider) the
+   way Danger Zone itself does. No border-top of its own — that divider
+   language is reserved for actual section boundaries. */
+.settings-subsection-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin: var(--space-lg) 0 4px;
+}
 /* margin-top already comes from .settings-section-title's own base rule
    (var(--space-lg)) now that the zeroing rule above excludes this class —
    only padding-top/border-top need setting here. */
@@ -1463,7 +1476,39 @@ input.item-editable-input, textarea.item-editable-input {
 }
 
 /* ---------- CSV import ---------- */
-.import-link { display: block; margin-bottom: var(--space-lg); }
+/* Group Settings' Data section — a proper row per action, replacing what
+   used to be a bare text link (no room to say what it actually does):
+   an icon in its own tinted circle, a title, and a real description, same
+   idea as .card-list-item but built for a couple of lines of explanation
+   instead of one short note. */
+.settings-action-list { display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+.settings-action-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  text-decoration: none;
+  color: var(--ink);
+}
+.settings-action-row:hover { border-color: var(--accent); }
+.settings-action-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-action-body { flex: 1; min-width: 0; }
+.settings-action-title { display: block; font-weight: 600; font-size: 14.5px; }
+.settings-action-desc { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+.settings-action-row .chevron { flex-shrink: 0; }
 .import-mapping-row {
   display: flex;
   justify-content: space-between;
@@ -1952,6 +1997,19 @@ input.item-editable-input, textarea.item-editable-input {
   padding-top: 14px;
 }
 .nav-item.signout:hover { background: var(--warn-light); }
+/* Group Settings' own Danger Zone tab — same warm slot/divider as
+   .signout above, but (unlike Sign Out) a real, selectable section, so
+   this needs its own active state rather than inheriting .nav-item.active
+   (which is styled for the ordinary accent palette, wrong color here). */
+.nav-item.danger {
+  color: var(--warn);
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding-top: 14px;
+}
+.nav-item.danger:hover { background: var(--warn-light); }
+.nav-item.danger.active { background: var(--warn-light); color: var(--warn); }
 .settings-content {
   flex: 1;
   min-width: 0;

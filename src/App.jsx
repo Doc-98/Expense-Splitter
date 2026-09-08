@@ -14,7 +14,6 @@ import GroupView from './pages/GroupView'
 import BillView from './pages/BillView'
 import JoinGroup from './pages/JoinGroup'
 import ClaimGuest from './pages/ClaimGuest'
-import RecurringBills from './pages/RecurringBills'
 import About from './pages/About'
 import Guide from './pages/Guide'
 import GroupSettings from './pages/GroupSettings'
@@ -157,7 +156,6 @@ function Shell() {
           }
         />
         <Route path="/groups/:groupId/bills/:billId" element={<RequireAuth><BillView /></RequireAuth>} />
-        <Route path="/groups/:groupId/recurring" element={<RequireAuth><RecurringBills /></RequireAuth>} />
         <Route
           path="/groups/:groupId/categorize"
           element={

@@ -208,3 +208,97 @@ export function SignOutIcon({ size = 20, ...props }) {
     </svg>
   )
 }
+
+// ---------- Group Settings nav icons ----------
+// One glyph per section in GroupSettings.jsx's own rail — General and
+// Members reuse SettingsIcon/GroupsNavIcon above rather than new glyphs
+// (a gear genuinely means "general settings" wherever it appears; a
+// group's Members tab is the same "people" concept Settings' own Groups
+// section already uses one of), the rest are new.
+
+// A single person, dashed rather than solid — a guest doesn't have an
+// account of their own, so the outline itself reads as "temporary/lighter"
+// next to ProfileIcon's solid one, without needing a second glyph shape.
+export function GuestIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="2" strokeDasharray="2.4 2.6" />
+      <path
+        d="M4.5 20c0-3.9 3.4-6.8 7.5-6.8s7.5 2.9 7.5 6.8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="2.6 3"
+      />
+    </svg>
+  )
+}
+
+// A price tag — categories are labels you tag spending with, not a chart
+// or a folder, so the glyph itself is the everyday "tag" object rather
+// than a generic list/grid icon.
+export function TagIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M11.6 3.5H5A1.5 1.5 0 003.5 5v6.6c0 .4.16.78.44 1.06l8.9 8.9c.58.59 1.53.59 2.12 0l6.6-6.6c.59-.59.59-1.54 0-2.12l-8.9-8.9a1.5 1.5 0 00-1.06-.44z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+    </svg>
+  )
+}
+
+// Two arrows chasing each other in a loop — the plainest "this repeats on
+// its own" glyph there is, distinct from UpdatesIcon's single refresh
+// arrow (that one means "check for something new"; this means "happens
+// again automatically").
+export function SubscriptionIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M4.5 12a7.5 7.5 0 0112.5-5.6M19.5 12a7.5 7.5 0 01-12.5 5.6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path d="M17 3.5v3.4h-3.4M7 20.5v-3.4h3.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// A downward arrow landing in an open tray — every row in the Data
+// section brings something *in* from outside the app, so an inbox/import
+// glyph fits all three (a CSV, a bank statement, or bills waiting to be
+// tagged) better than a document icon that says "file" without saying
+// which direction it's moving.
+export function ImportIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M12 3.5v11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7.5 10l4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 15v3.5A2 2 0 005.5 20.5h13a2 2 0 002-2V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// The standard warning triangle — Danger Zone is the one nav item that
+// needs to read as "different" at a glance even collapsed to icon-only,
+// same reasoning SignOutIcon gets its own warm-colored slot in the
+// account Settings rail.
+export function DangerIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M12 3.5L2 20.5h20L12 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M12 9.5v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="17.2" r="1.15" fill="currentColor" />
+    </svg>
+  )
+}

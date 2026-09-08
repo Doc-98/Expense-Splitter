@@ -36,13 +36,13 @@ const GROUPS = [
         id: 'personal',
         title: 'Personal spending — tracking just your own',
         keywords:
-          'personal solo alone just me financial companion budget my own spending bank statement import transactions recurring duplicate excel xlsx csv chatgpt claude gemini prompt copy paste api key match bank categories mapping',
+          'personal solo alone just me financial companion budget my own spending bank statement import transactions recurring subscription duplicate excel xlsx csv chatgpt claude gemini prompt copy paste api key match bank categories mapping',
         body: (
           <>
             <p>
               The <strong>Personal</strong> tab on the groups list opens a space that's just
               yours — created automatically the first time you open it, no setup needed.
-              Categories, budgets, receipt scanning, recurring bills, stats, and CSV export
+              Categories, budgets, receipt scanning, subscriptions, stats, and CSV export
               all work exactly like a normal group; the only thing missing is anything about
               other people (Invite, "paid by"/"split with" pickers, Settle Up), since there's
               never anyone in it but you.
@@ -52,7 +52,7 @@ const GROUPS = [
               real groups.
             </p>
             <p>
-              <strong>Group settings → Import a bank statement</strong> turns a bank or
+              <strong>Group settings → Data → Import a bank statement</strong> turns a bank or
               credit-card statement into bills — a CSV or Excel export from your bank if it
               offers one (matched against a header row locally, no AI required — Excel is there
               for mobile, since redacting a PDF or exporting to CSV is realistically a
@@ -87,10 +87,11 @@ const GROUPS = [
               false positive. A <strong>← Back</strong> button is always there to fix an earlier
               card if you catch a mistake. Every transaction becomes a real bill the moment you
               move past its card, not all at once at the end — so closing the tab partway through
-              a long statement loses nothing already confirmed; <strong>Group settings</strong>{' '}
-              shows "Resume bank statement import" the next time you're ready to finish the rest.
-              A charge that repeats on a regular schedule isn't detected automatically here — set
-              it up as a Recurring Bill by hand from Group Settings if you'd like it generated
+              a long statement loses nothing already confirmed; <strong>Group settings →
+              Data</strong> shows "Resume bank statement import" the next time you're ready to
+              finish the rest. A charge that repeats on a regular schedule isn't detected
+              automatically here — set it up as a Subscription by hand from{' '}
+              <strong>Group settings → Subscriptions</strong> if you'd like it generated
               automatically going forward.
             </p>
           </>
@@ -198,7 +199,7 @@ const GROUPS = [
             </p>
             <p>
               For clearing out a group's entire history in one go instead of selecting hundreds of
-              rows, see <strong>Delete all bills</strong> in Group settings.
+              rows, see <strong>Delete all bills</strong> in Group settings → Danger Zone.
             </p>
           </>
         ),
@@ -375,8 +376,8 @@ const GROUPS = [
             <p>
               Already tracking expenses in Splitwise? Export your group from Splitwise as a CSV,
               then use <strong>Import bills from Splitwise</strong> in that group's{' '}
-              <strong>Group settings</strong> to bring them in — realistically a one-time thing,
-              so it isn't on the group page itself. Each Splitwise expense becomes one bill,
+              <strong>Group settings → Data</strong> to bring them in — realistically a one-time
+              thing, so it isn't on the group page itself. Each Splitwise expense becomes one bill,
               dated to match the original. You'll be asked to match each Splitwise name to an
               existing member or guest before importing.
             </p>
@@ -489,15 +490,27 @@ const GROUPS = [
       {
         id: 'admin',
         title: 'Group settings and permissions',
-        keywords: 'admin permission remove kick leave transfer make owner delete all bills danger zone',
+        keywords:
+          'admin permission remove kick leave transfer make owner delete all bills delete group danger zone general members guests categories subscriptions data tabs nav',
         body: (
           <>
+            <p>
+              Group settings has the same side-nav layout as the account Settings page (tap the
+              gear on a group's own page to get there): <strong>General</strong> (the group's
+              name); <strong>Members</strong> and <strong>Guests</strong> — each its own tab now,
+              only shown for a real group (Personal has just you, forever, so neither applies
+              there); <strong>Categories</strong>; <strong>Subscriptions</strong> (see below); and{' '}
+              <strong>Data</strong>, for bringing in history from elsewhere (Splitwise, a bank
+              statement, categorizing older bills). <strong>Danger Zone</strong> sits pinned at
+              the bottom of the nav, split off in warm red — same treatment the account page gives
+              Sign Out.
+            </p>
             <p>
               Each group has one <strong>admin</strong> — whoever created it, marked with an
               "(admin)" label in the member list — unless the role's been handed to someone else
               via <strong>Make admin</strong> next to their name. Only the admin can remove
-              another real member; anyone can leave a group themselves any time. If the admin
-              leaves, the role passes automatically to whoever's been in the group the longest.
+              another real member. If the admin leaves, the role passes automatically to whoever's
+              been in the group the longest.
             </p>
             <p>
               Guests and categories are different — any active member can add, rename, or remove
@@ -505,14 +518,46 @@ const GROUPS = [
               against their will.
             </p>
             <p>
-              <strong>Danger zone</strong>, at the bottom, has <strong>Delete all bills</strong> —
-              every bill in the group at once, items and payer splits included, with a checkbox
-              to also clear the group's settle-up (payment) history if you want a true fresh
-              start rather than just clearing the bills. Members and categories are untouched
-              either way. This is the one bill-deleting action only the admin can do — everyone
-              else sees why instead of the button. Since it can erase a group's entire history in
-              one click, it doesn't take a plain "are you sure" either: you have to type the
-              group's exact name before the confirm button even enables.
+              <strong>Danger Zone</strong> has three things, not all shown to everyone.{' '}
+              <strong>Leave group</strong> is there for anyone, any time — a plain "are you sure"
+              is enough for that one, the same confirm-sheet pattern as Sign Out. The other two are
+              admin-only, and both need you to type the group's exact name before the confirm
+              button even enables, since either one erases something in a single click that can't
+              be undone: <strong>Delete all bills</strong> wipes every bill in the group at once,
+              items and payer splits included, with a checkbox to also clear the settle-up
+              (payment) history — members and categories stay untouched either way. <strong>Delete
+              group</strong> goes further still: the group itself, gone — every member, guest,
+              category, subscription, bill, and payment along with it. Neither Leave nor Delete
+              group is offered on your Personal space; it isn't something you leave or delete, it's
+              recreated automatically the next time you open that tab.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'subscriptions',
+        title: 'Subscriptions: bills on a schedule',
+        keywords: 'subscription recurring bill rent template schedule weekly monthly yearly repeat frequency edit pause resume delete',
+        body: (
+          <>
+            <p>
+              Set up something that repeats — rent, a subscription, a utility bill — once, from{' '}
+              <strong>Group settings → Subscriptions</strong>, and it generates itself
+              automatically going forward: a fixed amount, one payer, a fixed split, on a weekly,
+              monthly, or yearly schedule you pick when you create it. Each occurrence lands as an
+              ordinary bill the next time anyone opens the group on or after its due date — there's
+              no scheduled job behind this, so a group that's gone quiet for a while catches up on
+              everything it missed, in order, rather than skipping ahead.
+            </p>
+            <p>
+              The <strong>⋮</strong> on any subscription opens <strong>Edit</strong>,{' '}
+              <strong>Pause</strong>/<strong>Resume</strong>, and <strong>Delete</strong>. Edit
+              covers what a generated bill actually contains — title, amount, category, who paid,
+              who splits it — but not its frequency or start date; those two are locked in once
+              it's created, since changing them risks throwing off which occurrences already
+              happened. Delete and set up a fresh one instead if the schedule itself needs to
+              change. Deleting asks whether to also delete every bill this subscription has already
+              generated, or leave them exactly as they are.
             </p>
           </>
         ),

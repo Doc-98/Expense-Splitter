@@ -36,6 +36,7 @@ the (tiny) hosting bill. Setup takes about 20 minutes.
 - [Editing items](#editing-items)
 - [Backdating a bill](#backdating-or-postdating-a-bill)
 - [Settings page](#settings-page)
+- [Group settings page](#group-settings-page)
 - [Updates section, and the service worker](#updates-section-and-the-service-worker)
 - [Add to home screen](#add-to-home-screen)
 - [Currency](#currency)
@@ -45,7 +46,7 @@ the (tiny) hosting bill. Setup takes about 20 minutes.
 - [Time period controls](#time-period-controls)
 - [Spending graphs](#spending-graphs)
 - [Keyboard navigation](#keyboard-navigation)
-- [Recurring bills](#recurring-bills)
+- [Subscriptions](#subscriptions)
 - [What a bill row shows](#what-a-bill-row-shows)
 - [Searching and filtering bills](#searching-and-filtering-bills)
 - [Bill actions: deleting and sharing](#bill-actions-deleting-and-sharing)
@@ -306,16 +307,84 @@ are gone now that Settings → Budgets reaches the exact same component.
 
 Sign Out (`src/lib/signOut.js`) and leaving a group from either entry point
 (`src/lib/leaveGroup.js`) are both pulled into shared `lib/` functions for
-the same reason — GroupSettings' own member-list "Leave" and the Groups
-section's "⋮ → Leave group" need to do the exact same thing, snapshot
-included (see "How the data model works" below), not two copies that could
-quietly drift apart.
+the same reason — Group Settings' own Danger Zone "Leave group" and the
+Groups section's "⋮ → Leave group" need to do the exact same thing,
+snapshot included (see "How the data model works" below), not two copies
+that could quietly drift apart.
 
-Sign Out and Leave Group both confirm via a bottom sheet
-(`ConfirmSheet.jsx`) — a deliberately different pattern from the app's
-existing centered `.modal-panel` dialogs (the multi-payer split, delete-all-
-bills), which stay as they are; this one's for a plain yes/no with nothing
-else to show.
+Three different confirm patterns, by how much is at stake: `ConfirmSheet.jsx`
+(a bottom sheet) for a plain yes/no worth a beat of "are you sure" but
+nothing more — Sign Out, Leave group. `TypedConfirmSheet.jsx` (same sheet
+chrome, plus a "type the exact word to confirm" gate) for the genuinely
+hard-to-reverse ones, where a click alone is too easy to do by habit —
+Delete all bills, Delete group. And the app's existing centered
+`.modal-panel` dialogs stay as they are for anything content-heavy rather
+than a confirmation as such (the multi-payer split, a bill's own delete-
+selected count).
+
+## Group settings page
+
+Same left-rail shell as the account Settings page above (`SettingsNav.jsx`,
+reused as-is) — **General** (the group's name), **Members**, **Guests**,
+**Categories**, **Subscriptions**, **Data** (Splitwise import, categorizing
+older bills, and — Personal only — bank statement import), and **Danger
+Zone**, pinned at the bottom of the rail in warm red, same treatment the
+account page gives Sign Out. `GroupSettings.jsx` itself is just this shell
+now (a `CONTENT` lookup, same pattern as `Settings.jsx`); each tab's actual
+UI lives in its own component:
+
+| Section | Component |
+| --- | --- |
+| General | `GroupGeneralSection.jsx` |
+| Members | `GroupMembersSection.jsx` |
+| Guests | `GroupGuestsSection.jsx` |
+| Categories | `GroupCategoriesSection.jsx` |
+| Subscriptions | `GroupSubscriptionsSection.jsx` |
+| Data | `GroupDataSection.jsx` |
+| Danger Zone | `GroupDangerZoneSection.jsx` |
+
+Every section fetches its own data independently (`useParams()` for
+`groupId`, no props from the shell) rather than the shell loading
+everything up front and passing it down — matching how the account
+Settings page's own sections already work, and correct for free here too:
+since only the active tab is ever mounted, switching to a tab always gets
+this group's *current* data, not something read once and gone stale while
+you were on a different one. `lib/groupRole.js` is the one small shared
+helper — a combined "group name + is_personal + am I the admin" fetch for
+the sections that need to gate an admin-only action but don't otherwise
+need the full member roster (Danger Zone); Members and Guests each derive
+"am I the admin" from the roster they fetch for their own list anyway, no
+second query needed. `GroupDataSection.jsx` is the one section that does
+take a prop (`isPersonal`) — the shell already knows it, needed to decide
+which tabs even apply (see below), so passing that one boolean down beats
+a second round-trip just to re-learn it.
+
+Members and Guests are the two tabs only shown for a real group — a
+personal space has exactly one member (you) forever, with no invite code
+ever surfaced to change that (see `is_personal` on the `groups` table), so
+neither tab is offered there at all rather than existing and showing
+nothing.
+
+Danger Zone has three actions, not all shown to everyone. **Leave group**
+is offered to any real member of a non-personal group — confirmed via
+`ConfirmSheet.jsx`, the same plain bottom-sheet yes/no Sign Out uses (see
+"Settings page" above), since leaving is worth a beat of "are you sure" but
+nothing heavier. **Delete all bills** and **Delete group** are admin-only,
+and confirmed via `TypedConfirmSheet.jsx` instead — same sheet chrome, plus
+a "type the group's exact name to confirm" gate (case-sensitive, no
+trimming), since either one erases something in a single click that can't
+be undone. This replaces what used to be `TypedConfirmModal.jsx` (a
+centered dialog) — deleted outright once nothing referenced it anymore,
+rather than kept around as a second, unused pattern. **Delete group** is
+new: `delete_group()` (schema.sql; standalone migration
+`admin_delete_group.sql`) is the actual nuclear option — not just a
+group's bills, the group itself, cascading to every member, guest,
+category, subscription, bill, payment, and departed member's own frozen
+snapshot for it. Same admin gate as `delete_all_group_bills()`, plus one
+more: a personal space can never be deleted this way (it isn't something
+whose lifecycle is managed — it's recreated automatically the next time its
+owner opens the Personal tab), enforced server-side too, not just by the
+client never offering the button.
 
 ## Updates section, and the service worker
 
@@ -360,15 +429,15 @@ for the same underlying numbers.
 
 Every group starts with seven seeded categories (Groceries, Eating out,
 Household, Bills & utilities, Transport, Health, Other) — add, rename, or
-delete freely from Group Settings. A bill's category is the common case
-(one tap covers the whole receipt); an individual item can override it when
-it genuinely belongs somewhere else. Deleting a category in use doesn't
-block anything — every bill/item that referenced it just falls back to
-uncategorized.
+delete freely from Group Settings → **Categories**. A bill's category is
+the common case (one tap covers the whole receipt); an individual item can
+override it when it genuinely belongs somewhere else. Deleting a category
+in use doesn't block anything — every bill/item that referenced it just
+falls back to uncategorized.
 
 Each category has a color, shown as a small dot wherever the category
 appears — a 10-color preset plus the browser's own picker for anything else,
-changeable any time from Group Settings.
+changeable any time from Group Settings → Categories.
 
 ## Budgets
 
@@ -465,26 +534,36 @@ rather than sitting wherever the last row happens to land, so it's always
 reachable without a scroll — applies everywhere `Pagination` is used, not
 just the bill list.
 
-## Recurring bills
+## Subscriptions
 
-A template for something that repeats (rent, a subscription) at
-`/groups/:groupId/recurring` — a fixed amount, one payer, a fixed split. A
-generated occurrence is just an ordinary bill afterward, editable (including
-switching it to multiple payers) like any other.
+"Subscription" is user-facing terminology only — everything underneath
+(the `recurring_bills` table, `lib/recurringBills.js` and everything it
+exports, `recurring_bill_id` on `bills`) keeps its original name throughout
+the codebase. Same reasoning as "Spending thresholds" becoming "Budgets"
+everywhere it's actually shown: renaming the schema/module too would cost
+a real migration and a much wider rename for zero visible benefit.
 
-Each template row has a "⋮" menu — **Edit**, **Pause**/**Resume**, **Delete**
-— rather than the two buttons it used to be. **Edit** re-populates the same
-form used to create one (scrolled to and outlined so it's clear which
-template it's now pointed at) and re-submits through `updateRecurringBill()`
-instead of `addRecurringBill()`; it's deliberately narrower than creation,
-touching only what a generated bill *contains* (title, amount, category, who
-paid, who splits it), never **frequency** or **start date** — those anchor
-`next_due_date`/`day_of_month`, already stored and potentially already
-advanced past the original start date, so editing them after the fact risks
-silently corrupting future occurrences. Delete and recreate covers "I want
-this on a different schedule" instead. The "Add"/"Save changes" button stays
-disabled until title and amount are genuinely valid (and, in a real group,
-at least one person is still selected to split with).
+A template for something that repeats (rent, a subscription) — a fixed
+amount, one payer, a fixed split — managed from Group Settings →
+**Subscriptions** (`GroupSubscriptionsSection.jsx`; the standalone
+`/groups/:groupId/recurring` page this used to be its own route for is
+gone, folded into the tab). A generated occurrence is just an ordinary
+bill afterward, editable (including switching it to multiple payers) like
+any other.
+
+Each subscription row has a "⋮" menu — **Edit**, **Pause**/**Resume**,
+**Delete**. **Edit** re-populates the same form used to create one
+(scrolled to and outlined so it's clear which one it's now pointed at) and
+re-submits through `updateRecurringBill()` instead of `addRecurringBill()`;
+it's deliberately narrower than creation, touching only what a generated
+bill *contains* (title, amount, category, who paid, who splits it), never
+**frequency** or **start date** — those anchor `next_due_date`/
+`day_of_month`, already stored and potentially already advanced past the
+original start date, so editing them after the fact risks silently
+corrupting future occurrences. Delete and recreate covers "I want this on a
+different schedule" instead. The "Add"/"Save changes" button stays disabled
+until title and amount are genuinely valid (and, in a real group, at least
+one person is still selected to split with).
 
 There's no scheduled job anywhere in this app: `processDueRecurringBills()`
 runs whenever anyone opens the group and creates whatever's due — every
@@ -535,21 +614,21 @@ Every bill has a **⋮** menu (`src/components/BillActionsMenu.jsx`) with
 above the list adds **Share** (one combined recap) and **Delete selected**.
 
 For wiping a group's *entire* bill history in one shot, Group Settings'
-**Danger zone → Delete all bills** is the one bill-deleting action that's
+**Danger Zone → Delete all bills** is the one bill-deleting action that's
 admin-only — every other delete path stays open to any active member. It
 asks whether to also delete the group's settle-up (payment) records, and
-requires typing the group's exact name to confirm (`TypedConfirmModal`),
-since it can erase everything a group has ever recorded. Every delete path
-except this one (and even then, only if asked) leaves payment records
-untouched — they're a separate ledger of cash that's already changed hands,
-not data owned by any particular bill.
+requires typing the group's exact name to confirm (`TypedConfirmSheet`, see
+"Group settings page" above), since it can erase everything a group has
+ever recorded. Every delete path except this one (and even then, only if
+asked) leaves payment records untouched — they're a separate ledger of
+cash that's already changed hands, not data owned by any particular bill.
 
 ## Your groups & inviting people
 
 The groups list (`/`) shows your groups first, paginated at 10 per page,
-with "Create a new group" below it rather than above. **Invite**, in
-Group Settings next to Members, gives a QR code (for someone standing next
-to you) plus a shareable link — both generated client-side, no third-party
+with "Create a new group" below it rather than above. **Invite**, in Group
+Settings' **Members** tab, gives a QR code (for someone standing next to
+you) plus a shareable link — both generated client-side, no third-party
 image service involved.
 
 ## Personal spending
@@ -557,7 +636,7 @@ image service involved.
 The **Personal** tab on the groups list (`/`) opens a single-member group
 that's just yours — auto-created the first time you open the tab, no setup
 step. It's a real group under the hood (`groups.is_personal`), so
-categories, budgets, receipt scanning, recurring bills, stats, and CSV
+categories, budgets, receipt scanning, subscriptions, stats, and CSV
 export all just work; only Invite, "paid by"/"split with" pickers, and
 Settle Up are hidden, since there's never anyone but you in it. It folds
 into "Your Stats" automatically, same as any other group.
@@ -565,8 +644,8 @@ into "Your Stats" automatically, same as any other group.
 ### Importing a bank statement
 
 `/groups/:groupId/import-bank-statement` (linked from the Personal space's
-own Group Settings — not available for a real group yet) turns a bank or
-credit-card statement into bills. Three ways in:
+own Group Settings → **Data** — not available for a real group yet) turns
+a bank or credit-card statement into bills. Three ways in:
 
 - **CSV or Excel export**, if your bank offers one — parsed locally first,
   no AI required. Both formats share one column-detection-plus-parsing pass
@@ -690,14 +769,14 @@ Runs automatically, client-side, no AI needed — see
 `src/lib/bankStatementDetection.js`.
 
 (This used to also detect likely-recurring charges and offer a one-click
-Recurring Bill template, clustering transactions by merchant name and exact
+Subscription template, clustering transactions by merchant name and exact
 amount. Removed — in practice it clustered unrelated purchases that shared
 a payment processor's own generic descriptor rather than the actual
 merchant, e.g. every PayPal-routed direct debit reading as "PayPal Europe
 S.a.r.l. et Cie S.C.A" regardless of what was bought. That's not a
 tunable false-positive rate — the statement's own description field
 genuinely doesn't carry the distinguishing information in that case.
-Setting up a Recurring Bill by hand, from Group Settings, is unaffected.)
+Setting up a Subscription by hand, from Group Settings, is unaffected.)
 
 - **Duplicates**: a transaction matching an existing bill's merchant and
   amount within a few days defaults its checkbox off, flagged "possible
@@ -765,8 +844,8 @@ selecting bills and sharing them from the list itself is for.
 
 ### Importing from Splitwise
 
-`/groups/:groupId/import` (linked from Group Settings) reads a Splitwise CSV
-export directly. Splitwise gives each row a **net balance** per person
+`/groups/:groupId/import` (linked from Group Settings → Data) reads a
+Splitwise CSV export directly. Splitwise gives each row a **net balance** per person
 (positive = owed, negative = owes), not a raw share amount —
 `src/lib/splitwiseImport.js` reconstructs who paid and each person's actual
 share from that, dated to match the original expense. A settle-up transfer
@@ -802,8 +881,8 @@ hundreds of reconstructed shares. A mismatch is shown, never a hard stop —
 
 ### Categorizing bills after an import
 
-`/groups/:groupId/categorize` (from Group Settings) catches up an import's
-uncategorized bills in two passes, both producing only *suggestions* — a
+`/groups/:groupId/categorize` (from Group Settings → Data) catches up an
+import's uncategorized bills in two passes, both producing only *suggestions* — a
 bill only changes once you review and confirm:
 
 1. **Free and instant** — reads Splitwise's own original category back out
@@ -871,13 +950,13 @@ guest.
 <details>
 <summary>Guests, claiming, multiple payers, admin permissions, leaving a group</summary>
 
-**Guests** — added from Group Settings with no account at all
+**Guests** — added from Group Settings → **Guests** with no account at all
 (`group_members.user_id` null, just a `display_name`). Every table that
 references "a person" points at `group_members.id`, so a guest works exactly
 like a real account for splitting, fronting, and settling up. Removing one
 just flips `active` off — restorable any time. **Deleting one permanently**
 is admin-only and blocked server-side unless they're off every bill,
-payment, and recurring template first, checked table-by-table rather than
+payment, and subscription first, checked table-by-table rather than
 relying on a blocking foreign key — `item_shares` in particular cascades on
 delete, and would otherwise silently drop their share off someone else's
 item with no error.
@@ -896,14 +975,15 @@ rows once this is used — the common single-payer case still just uses
 `creditPayers()` helper.
 
 **Admin permissions** — one admin per group (`groups.admin_id`), starting
-with whoever created it. Only the admin can remove someone *else* (anyone
-can remove themselves); the role auto-passes to the longest-standing
+with whoever created it. Only the admin can remove someone *else*, from
+Group Settings → **Members**; the role auto-passes to the longest-standing
 remaining member if the admin leaves, or can be handed off directly from
-Group Settings. Guest management (add/rename/archive) is open to any active
+that same tab. Guest management (add/rename/archive) is open to any active
 member — it's not "removing a real person against their will," so it isn't
 gated the same way.
 
-**Leaving a group** — flips `group_members.active` to `false`; nothing is
+**Leaving a group** — Group Settings → **Danger Zone → Leave group** (any
+member, admin included) flips `group_members.active` to `false`; nothing is
 deleted, and old bills/items/payments stay exactly as they were. A
 `departure_snapshots` row is computed client-side *at the moment of
 removal*, while access still exists — day-by-day paid/consumed totals plus
@@ -929,7 +1009,7 @@ project, built as time and interest allow:
   simple lookup
 - True multi-currency support (conversion within a bill/group), distinct
   from today's display-only currency picker
-- A scheduled/background job for recurring bills, instead of the current
+- A scheduled/background job for subscriptions, instead of the current
   open-the-app trigger
 
 ## What's intentionally left simple (v1)
@@ -939,8 +1019,6 @@ project, built as time and interest allow:
 - No push notifications for a group-mate's new bill (realtime *within* an
   open app already works)
 - No receipt photo is kept after scanning, only the extracted items
-- Deleting a whole group isn't wired up yet (bills/members can be removed
-  individually)
 - A departure snapshot's numbers are trusted from the client, not re-derived
   server-side — reasonable for a personal-use app, worth revisiting for
   less-trusted users
@@ -948,9 +1026,9 @@ project, built as time and interest allow:
   name won't parse correctly for that line
 - OpenAI and other providers aren't built, but would follow the existing
   `ReceiptParserStrategy` shape
-- A recurring template covers one payer and a fixed split only — switch a
+- A subscription covers one payer and a fixed split only — switch a
   specific generated occurrence to Multiple payers by hand if needed
-- Recurring bills generate on open, not on a schedule, so they can appear
+- Subscriptions generate on open, not on a schedule, so they can appear
   "late"
 - Claim-guest links trust possession of the link, same model as the general
   group invite link

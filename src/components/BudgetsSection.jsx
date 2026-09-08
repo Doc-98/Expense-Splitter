@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { DEFAULT_CATEGORIES, mergeCategoriesByName } from '../lib/categories'
-import { fetchThresholds, saveThreshold, deleteThreshold } from '../lib/thresholds'
+import { DEFAULT_CATEGORIES } from '../lib/categories'
+import { saveThreshold, deleteThreshold } from '../lib/thresholds'
 import { parseNumber } from '../lib/parseNumber'
-
-const DEFAULT_NAME_KEYS = new Set(DEFAULT_CATEGORIES.map((c) => c.name.toLowerCase()))
+import { fetchBudgetsData } from '../lib/prefetchSettings'
+import { budgetsCache, BUDGETS_CACHE_KEY } from '../lib/budgetsCache'
 
 // The actual "budgets" (formerly "spending thresholds" — renamed in the UI,
 // see the Settings restructure) UI/logic. Used to also be reachable
@@ -19,9 +18,16 @@ const DEFAULT_NAME_KEYS = new Set(DEFAULT_CATEGORIES.map((c) => c.name.toLowerCa
 export default function BudgetsSection() {
   const { user } = useAuth()
 
-  const [loading, setLoading] = useState(true)
-  const [customCategories, setCustomCategories] = useState([]) // merged, non-default tags across my groups
-  const [thresholdByKey, setThresholdByKey] = useState(new Map()) // lowercased name -> { category_name, amount }
+  // Seeded straight from budgetsCache when there's anything there — either
+  // a prefetch fired the instant the account chip was clicked (see
+  // prefetchSettings.js/AppHeader.jsx) or a previous visit this session —
+  // same "paint from cache, then quietly revalidate" trick
+  // groupsListCache.js already gets Groups.jsx. `loading` starts false in
+  // that case since there's already real data to show.
+  const cached = budgetsCache.get(BUDGETS_CACHE_KEY)
+  const [loading, setLoading] = useState(!cached)
+  const [customCategories, setCustomCategories] = useState(cached?.customCategories ?? []) // merged, non-default tags across my groups
+  const [thresholdByKey, setThresholdByKey] = useState(cached?.thresholdByKey ?? new Map()) // lowercased name -> { category_name, amount }
   const [drafts, setDrafts] = useState({}) // lowercased name -> in-progress input string
   const [savedKey, setSavedKey] = useState(null)
   const [error, setError] = useState(null)
@@ -29,31 +35,10 @@ export default function BudgetsSection() {
   const load = useCallback(async () => {
     setError(null)
     try {
-      const { data: memberRows, error: memberError } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id)
-        .eq('active', true)
-      if (memberError) throw memberError
-      const groupIds = [...new Set((memberRows || []).map((r) => r.group_id))]
-
-      const { data: categoriesData, error: categoriesError } = groupIds.length
-        ? await supabase
-            .from('categories')
-            .select('name, color')
-            .in('group_id', groupIds)
-            .order('created_at', { ascending: true })
-        : { data: [], error: null }
-      if (categoriesError) throw categoriesError
-
-      const merged = mergeCategoriesByName(categoriesData || [])
-      const custom = merged
-        .filter((c) => !DEFAULT_NAME_KEYS.has(c.name.toLowerCase()))
-        .sort((a, b) => a.name.localeCompare(b.name))
-      setCustomCategories(custom)
-
-      const thresholds = await fetchThresholds(user.id)
-      setThresholdByKey(new Map(thresholds.map((t) => [t.category_name.trim().toLowerCase(), t])))
+      const data = await fetchBudgetsData(user.id)
+      setCustomCategories(data.customCategories)
+      setThresholdByKey(data.thresholdByKey)
+      budgetsCache.set(BUDGETS_CACHE_KEY, data)
     } catch (err) {
       // Without this, a failure anywhere above (most likely: the
       // spending_thresholds table not existing yet on a database that
@@ -94,6 +79,7 @@ export default function BudgetsSection() {
           setThresholdByKey((m) => {
             const next = new Map(m)
             next.delete(key)
+            budgetsCache.set(BUDGETS_CACHE_KEY, { customCategories, thresholdByKey: next })
             return next
           })
         }
@@ -104,7 +90,11 @@ export default function BudgetsSection() {
           return
         }
         await saveThreshold(user.id, name, amount)
-        setThresholdByKey((m) => new Map(m).set(key, { category_name: name, amount }))
+        setThresholdByKey((m) => {
+          const next = new Map(m).set(key, { category_name: name, amount })
+          budgetsCache.set(BUDGETS_CACHE_KEY, { customCategories, thresholdByKey: next })
+          return next
+        })
       }
       setDrafts((d) => {
         const next = { ...d }

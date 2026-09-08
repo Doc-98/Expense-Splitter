@@ -886,6 +886,52 @@ end;
 $$;
 
 -- ============================================================================
+-- delete_group: the actual "delete this entire group" nuclear option — not
+-- just its bills (see delete_all_group_bills above), the group itself:
+-- members, guests, categories, recurring templates, payments, and every
+-- departed member's own frozen snapshot of what they spent here, all gone
+-- with it via each table's own `on delete cascade` back to groups(id).
+-- Nothing left to clean up client-side afterward.
+--
+-- Same admin gate as every other Danger Zone action, plus one more that
+-- doesn't apply to any of them: a personal space can never be deleted this
+-- way. It isn't really "a group" someone manages the lifecycle of — it's
+-- recreated automatically (see get_or_create_personal_group below) the
+-- next time its owner opens the Personal tab, so "deleting" it would just
+-- wipe today's history and hand them back an empty one, not actually
+-- remove anything durable. The client never even offers this option for a
+-- personal space, but the check lives here too, not just there.
+-- ============================================================================
+create function public.delete_group(target_group_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_participant_id uuid;
+  current_admin_id uuid;
+  target_is_personal boolean;
+begin
+  select id into caller_participant_id from group_members
+    where group_id = target_group_id and user_id = auth.uid() and active = true;
+
+  select admin_id, is_personal into current_admin_id, target_is_personal
+    from groups where id = target_group_id;
+
+  if caller_participant_id is null or caller_participant_id <> current_admin_id then
+    raise exception 'Only the group admin can delete this group';
+  end if;
+
+  if target_is_personal then
+    raise exception 'Your personal space can''t be deleted this way';
+  end if;
+
+  delete from groups where id = target_group_id;
+end;
+$$;
+
+-- ============================================================================
 -- create_group: creates a group, adds the creator as its first member, and
 -- seeds a starter set of categories, all in one atomic step. Doing the
 -- group/membership part as two separate client-side inserts caused a race
