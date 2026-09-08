@@ -1,734 +1,107 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { useAuth } from '../context/AuthContext'
-import {
-  fetchAllGroupMembers,
-  addGuest,
-  setGuestActive,
-  renameGuest,
-  requestClaimLink,
-  deleteGuestPermanently,
-} from '../lib/members'
-import {
-  fetchCategories,
-  addCategory,
-  renameCategory,
-  deleteCategory,
-  updateCategoryColor,
-  CATEGORY_COLORS,
-} from '../lib/categories'
-import { shareOrCopyText } from '../lib/shareText'
-import { snapshotAndRemoveMember } from '../lib/leaveGroup'
-import { fetchDraft } from '../lib/bankImportDrafts'
-import TypedConfirmModal from '../components/TypedConfirmModal'
-import ColorSwatchPicker from '../components/ColorSwatchPicker'
-import CategoryColorButton from '../components/CategoryColorButton'
-import InviteMenu from '../components/InviteMenu'
+import GroupGeneralSection from '../components/GroupGeneralSection'
+import GroupMembersSection from '../components/GroupMembersSection'
+import GroupGuestsSection from '../components/GroupGuestsSection'
+import GroupCategoriesSection from '../components/GroupCategoriesSection'
+import GroupSubscriptionsSection from '../components/GroupSubscriptionsSection'
+import GroupDataSection from '../components/GroupDataSection'
+import GroupDangerZoneSection from '../components/GroupDangerZoneSection'
+import SettingsNav from '../components/SettingsNav'
 import BackButton from '../components/BackButton'
-import { ArrowRightIcon } from '../components/icons'
+import {
+  MenuIcon,
+  SettingsIcon,
+  GroupsNavIcon,
+  GuestIcon,
+  TagIcon,
+  SubscriptionIcon,
+  ImportIcon,
+  DangerIcon,
+} from '../components/icons'
+
+// Same left-rail shell as the account Settings page (SettingsNav.jsx) —
+// this is Group Settings' turn to get it, replacing what used to be one
+// long scroll of every section stacked on top of each other. Members and
+// Guests are the two sections that only mean anything once there's a group
+// of more than one — a personal space has exactly one member (you)
+// forever, with no invite code ever surfaced to change that (see
+// is_personal on the groups table) — so those two tabs simply aren't
+// offered there at all, rather than existing but showing nothing.
+const ALL_SECTIONS = [
+  { id: 'general', label: 'General', Icon: SettingsIcon },
+  { id: 'members', label: 'Members', Icon: GroupsNavIcon, hideWhenPersonal: true },
+  { id: 'guests', label: 'Guests', Icon: GuestIcon, hideWhenPersonal: true },
+  { id: 'categories', label: 'Categories', Icon: TagIcon },
+  { id: 'subscriptions', label: 'Subscriptions', Icon: SubscriptionIcon },
+  { id: 'data', label: 'Data', Icon: ImportIcon },
+  { id: 'danger', label: 'Danger Zone', Icon: DangerIcon },
+]
+
+const CONTENT = {
+  general: GroupGeneralSection,
+  members: GroupMembersSection,
+  guests: GroupGuestsSection,
+  categories: GroupCategoriesSection,
+  subscriptions: GroupSubscriptionsSection,
+  data: GroupDataSection,
+  danger: GroupDangerZoneSection,
+}
 
 export default function GroupSettings() {
   const { groupId } = useParams()
-  const { user } = useAuth()
-  const navigate = useNavigate()
-
-  // The group's actual current name — everywhere else on this page that
-  // shows or relies on it (InviteMenu, the claim-link share text, the
-  // delete-all-bills confirmation and its typed-name check) reads this,
-  // never nameDraft below, so an unsaved in-progress edit in the rename
-  // box can't leak into "type the group's name to confirm you mean it."
-  const [name, setName] = useState('')
-  const [nameDraft, setNameDraft] = useState('')
-  const [adminId, setAdminId] = useState(null)
+  const [activeId, setActiveId] = useState('general')
+  const [expanded, setExpanded] = useState(false)
+  // Defaults to false (show every tab) rather than null/"loading" — a
+  // brief flash of Members/Guests being offered then disappearing, on the
+  // rare visit to a personal space's settings, beats gating the whole nav
+  // rail's first paint on this one query.
   const [isPersonal, setIsPersonal] = useState(false)
-  // Only ever needed for InviteMenu below — every other field this page
-  // manages already had its own bit of state before this one did.
-  const [inviteCode, setInviteCode] = useState('')
-  const [members, setMembers] = useState([])
-  const [error, setError] = useState(null)
-  const [guestName, setGuestName] = useState('')
-  const [editingGuestId, setEditingGuestId] = useState(null)
-  const [editingGuestName, setEditingGuestName] = useState('')
-  const [claimStatus, setClaimStatus] = useState(null)
-  const [categories, setCategories] = useState([])
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0])
-  const [editingCategoryId, setEditingCategoryId] = useState(null)
-  const [editingCategoryName, setEditingCategoryName] = useState('')
-  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false)
-  const [deletingAllBills, setDeletingAllBills] = useState(false)
-  const [deletePaymentsToo, setDeletePaymentsToo] = useState(false)
-  // The archived guest currently up for permanent deletion, or null — a
-  // member object rather than just an id, so the confirm modal below has
-  // their name to show/type without a second lookup.
-  const [deleteGuestTarget, setDeleteGuestTarget] = useState(null)
-  const [deletingGuest, setDeletingGuest] = useState(false)
 
-  const myParticipantId = members.find((m) => m.userId === user.id)?.id
-  const isAdmin = myParticipantId && myParticipantId === adminId
-
-  const loadGroup = useCallback(async () => {
-    const { data } = await supabase.from('groups').select('*').eq('id', groupId).single()
-    setName(data?.name || '')
-    setNameDraft(data?.name || '')
-    setAdminId(data?.admin_id || null)
+  const loadIsPersonal = useCallback(async () => {
+    const { data } = await supabase.from('groups').select('is_personal').eq('id', groupId).single()
     setIsPersonal(data?.is_personal || false)
-    setInviteCode(data?.invite_code || '')
-  }, [groupId])
-
-  const loadMembers = useCallback(async () => {
-    setMembers(await fetchAllGroupMembers(groupId))
-  }, [groupId])
-
-  const loadCategories = useCallback(async () => {
-    setCategories(await fetchCategories(groupId))
-  }, [groupId])
-
-  // { reviewedCount, totalReviewable } for an unfinished bank statement
-  // import, or null — see bank_import_drafts in schema.sql. Only fetched
-  // once we know this is the personal space (the only place the feature's
-  // offered), not on every group's settings page.
-  const [bankImportDraft, setBankImportDraft] = useState(null)
-
-  const loadBankImportDraft = useCallback(async () => {
-    const draft = await fetchDraft(groupId)
-    if (!draft) {
-      setBankImportDraft(null)
-      return
-    }
-    const totalReviewable = draft.transactions.filter((t) => t.direction === 'debit').length
-    const reviewedCount = draft.review.filter((r, i) => draft.transactions[i].direction === 'debit' && r.reviewed).length
-    setBankImportDraft({ reviewedCount, totalReviewable })
   }, [groupId])
 
   useEffect(() => {
-    loadGroup()
-    loadMembers()
-    loadCategories()
-  }, [loadGroup, loadMembers, loadCategories])
+    loadIsPersonal()
+  }, [loadIsPersonal])
 
-  useEffect(() => {
-    if (isPersonal) loadBankImportDraft()
-  }, [isPersonal, loadBankImportDraft])
+  const sections = useMemo(
+    () => ALL_SECTIONS.filter((s) => !s.hideWhenPersonal || !isPersonal),
+    [isPersonal]
+  )
 
-  async function saveName(e) {
-    e.preventDefault()
-    const trimmed = nameDraft.trim()
-    if (!trimmed || trimmed === name) return
-    const { error: renameError } = await supabase.from('groups').update({ name: trimmed }).eq('id', groupId)
-    if (renameError) {
-      setError(renameError.message)
-    } else {
-      setName(trimmed)
-      // Nothing else to reset — nameDraft already holds `trimmed` (or
-      // something whitespace-different from it), and `name` now matches
-      // it, so the submit button's disabled-until-changed guard below
-      // fades it right back out on its own, same as Settings.jsx's own
-      // "Your name" field.
-    }
-  }
-
-  async function submitAddGuest(e) {
-    e.preventDefault()
-    if (!guestName.trim()) return
-    setError(null)
-    try {
-      await addGuest(groupId, guestName.trim())
-      setGuestName('')
-      loadMembers()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  async function saveGuestRename(memberId) {
-    if (!editingGuestName.trim()) return
-    setError(null)
-    try {
-      await renameGuest(memberId, editingGuestName.trim())
-      setEditingGuestId(null)
-      loadMembers()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  async function toggleGuestActive(member, active) {
-    setError(null)
-    try {
-      await setGuestActive(member.id, active)
-      loadMembers()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  // The actual safety check (zero bills, payments, or recurring templates
-  // still referencing this guest) lives server-side, in
-  // delete_guest_permanently itself — this just surfaces whatever it
-  // says, same as handleDeleteAllBills does for its own RPC. The modal
-  // stays open on failure (only a successful delete closes it), so
-  // exactly why it was rejected — visible in the page's own error banner,
-  // showing dimmed through the modal backdrop — is still right there
-  // rather than needing the dialog reopened to see it again.
-  async function confirmDeleteGuestPermanently() {
-    if (!deleteGuestTarget) return
-    setDeletingGuest(true)
-    setError(null)
-    try {
-      await deleteGuestPermanently(deleteGuestTarget.id)
-      setDeleteGuestTarget(null)
-      loadMembers()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setDeletingGuest(false)
-    }
-  }
-
-  async function getClaimLink(member) {
-    setError(null)
-    try {
-      const token = await requestClaimLink(member.id)
-      const url = `${window.location.origin}/claim/${token}`
-      const result = await shareOrCopyText(url, `Claim your history in ${name}`)
-      if (result === 'copied') {
-        setClaimStatus(`Claim link for ${member.name} copied — send it to them directly.`)
-        setTimeout(() => setClaimStatus(null), 3000)
-      }
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  async function submitAddCategory(e) {
-    e.preventDefault()
-    if (!newCategoryName.trim()) return
-    setError(null)
-    try {
-      await addCategory(groupId, newCategoryName.trim(), newCategoryColor)
-      setNewCategoryName('')
-      loadCategories()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  async function saveCategoryRename(categoryId) {
-    if (!editingCategoryName.trim()) return
-    setError(null)
-    try {
-      await renameCategory(categoryId, editingCategoryName.trim())
-      setEditingCategoryId(null)
-      loadCategories()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  // Applied straight away, no confirm step — same as picking a color when
-  // first adding a category, and easy enough to undo (click the dot again)
-  // that a confirmation would only be friction.
-  async function handleCategoryColorChange(categoryId, color) {
-    setError(null)
-    const previous = categories
-    setCategories((cats) => cats.map((c) => (c.id === categoryId ? { ...c, color } : c)))
-    try {
-      await updateCategoryColor(categoryId, color)
-    } catch (err) {
-      setCategories(previous)
-      setError(err.message)
-    }
-  }
-
-  async function handleDeleteCategory(category) {
-    if (
-      !window.confirm(
-        `Delete "${category.name}"? Any bills or items tagged with it will become uncategorized — nothing about them is deleted.`
-      )
-    ) {
-      return
-    }
-    setError(null)
-    try {
-      await deleteCategory(category.id)
-      loadCategories()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  // Goes through the delete_all_group_bills RPC rather than a plain client
-  // delete — it's the one place that enforces "only the admin can wipe a
-  // group's entire bill history," and (when asked) also clears the
-  // settle-up ledger in the same step. Items, item_shares, and bill_payers
-  // still cascade with each bill via their own FK constraints, same as a
-  // single bill delete; payments are only ever touched here if
-  // deletePaymentsToo is checked — otherwise this leaves them alone, same
-  // as every other delete path in the app.
-  async function handleDeleteAllBills() {
-    setDeletingAllBills(true)
-    setError(null)
-    const { error: deleteError } = await supabase.rpc('delete_all_group_bills', {
-      target_group_id: groupId,
-      delete_payments: deletePaymentsToo,
-    })
-    setDeletingAllBills(false)
-    if (deleteError) {
-      setError(deleteError.message)
-    } else {
-      setShowDeleteAllModal(false)
-      setDeletePaymentsToo(false)
-    }
-  }
-
-  async function makeAdmin(member) {
-    if (!window.confirm(`Make ${member.name} the admin of this group? You'll no longer be able to remove other members yourself.`)) {
-      return
-    }
-    setError(null)
-    const { error: transferError } = await supabase.rpc('transfer_admin', {
-      target_group_id: groupId,
-      new_admin_id: member.id,
-    })
-    if (transferError) {
-      setError(transferError.message)
-    } else {
-      loadGroup()
-    }
-  }
-
-  // Real accounts go through remove_group_member — this both revokes their
-  // access (they'd otherwise keep querying group data forever) and freezes
-  // a personal record of their history first, while they still can. Guests
-  // never had that access to begin with, so removing one is just flipping
-  // active off directly (see toggleGuestActive above) — no snapshot needed.
-  //
-  // Only the admin can remove someone else; anyone can still remove
-  // themselves — the RPC itself enforces this too, so this is a UX
-  // convenience (hiding a button that would fail) not the actual security
-  // boundary.
-  async function removeRealMember(member) {
-    const isSelf = member.userId === user.id
-    const label = isSelf ? 'leave this group' : 'remove this person from the group'
-    if (
-      !window.confirm(
-        `Are you sure you want to ${label}? Your stats for this group are kept, just frozen as of right now.`
-      )
-    ) {
-      return
-    }
-
-    setError(null)
-    try {
-      // `categories` is already loaded for this page's own category-
-      // management UI further down — reused here rather than a second
-      // fetch (see snapshotAndRemoveMember for why it's needed at all).
-      await snapshotAndRemoveMember({ groupId, groupName: name, member, categories })
-    } catch (err) {
-      setError(err.message)
-      return
-    }
-
-    if (isSelf) {
-      navigate('/')
-    } else {
-      loadGroup() // admin may have changed if the admin themself just left
-      loadMembers()
-    }
-  }
-
-  const activeRealMembers = members.filter((m) => m.active && !m.isGuest)
-  const activeGuests = members.filter((m) => m.active && m.isGuest)
-  const formerRealMembers = members.filter((m) => !m.active && !m.isGuest)
-  const archivedGuests = members.filter((m) => !m.active && m.isGuest)
+  // A personal-space visit deep-linked (or left over from a previous
+  // visit's state) at "members"/"guests" would otherwise render a tab that
+  // isn't even in the nav anymore — fall back to General same as an
+  // unrecognized id would.
+  const activeSection = sections.find((s) => s.id === activeId) || sections[0]
+  const Content = CONTENT[activeSection.id]
 
   return (
-    <div className="page">
+    <div className="page settings-page">
       <header className="page-header">
         <BackButton to={`/groups/${groupId}`} />
-        <h1>Group settings</h1>
-      </header>
-
-      <h2 className="settings-section-title">Group name</h2>
-      <form onSubmit={saveName} className="inline-form">
-        <div className="input-with-submit">
-          <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Group name" />
-          <button
-            type="submit"
-            className="input-submit-btn"
-            disabled={!nameDraft.trim() || nameDraft.trim() === name}
-            aria-label="Save group name"
-          >
-            <ArrowRightIcon size={16} />
-          </button>
-        </div>
-      </form>
-
-      {/* Members, guests, and everything about who's in the group only
-          means something once there's a group of more than one — a
-          personal space has exactly one member (you) forever, with no
-          invite code ever surfaced to change that (see is_personal on the
-          groups table). */}
-      {!isPersonal && (
-        <>
-      <div className="settings-section-title-row">
-        <h2 className="settings-section-title">Members ({activeRealMembers.length})</h2>
-        <InviteMenu inviteUrl={inviteCode ? `${window.location.origin}/join/${inviteCode}` : ''} groupName={name} />
-      </div>
-      <ul className="member-list">
-        {activeRealMembers.map((m) => {
-          const isSelf = m.userId === user.id
-          const isThisMemberAdmin = m.id === adminId
-          return (
-            <li key={m.id} className="member-list-item">
-              <span>
-                {m.name}
-                {isSelf && <span className="muted"> (you)</span>}
-                {isThisMemberAdmin && <span className="muted"> (admin)</span>}
-              </span>
-              <span className="member-list-actions">
-                {isAdmin && !isThisMemberAdmin && (
-                  <button type="button" className="btn-link" onClick={() => makeAdmin(m)}>
-                    Make admin
-                  </button>
-                )}
-                {(isSelf || isAdmin) && (
-                  <button
-                    type="button"
-                    className="btn-link dropdown-item-warn"
-                    onClick={() => removeRealMember(m)}
-                  >
-                    {isSelf ? 'Leave' : 'Remove'}
-                  </button>
-                )}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-      {!isAdmin && (
-        <p className="muted">
-          Only the group admin can remove other members — you can still leave any time.
-        </p>
-      )}
-
-      <h2 className="settings-section-title">Guests ({activeGuests.length})</h2>
-      <p className="muted">
-        People without an account of their own — add anyone who's splitting a bill but doesn't want to
-        sign up. They can be assigned to items and settled up with exactly like anyone else. If one
-        of them decides to sign up for real later, "Get claim link" gives you a private link that
-        hands them this exact history under their own account — send it directly to them, not to
-        the whole group.
-      </p>
-      {claimStatus && <p className="status-success">{claimStatus}</p>}
-      <ul className="member-list">
-        {activeGuests.map((m) => (
-          <li key={m.id} className="member-list-item">
-            {editingGuestId === m.id ? (
-              <form
-                className="guest-rename-form"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  saveGuestRename(m.id)
-                }}
-              >
-                <input
-                  value={editingGuestName}
-                  onChange={(e) => setEditingGuestName(e.target.value)}
-                  autoFocus
-                />
-                <button type="submit" className="btn-link">
-                  Save
-                </button>
-                <button type="button" className="btn-link" onClick={() => setEditingGuestId(null)}>
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <>
-                <span>
-                  {m.name} <span className="muted">(guest)</span>
-                </span>
-                <span className="member-list-actions">
-                  <button
-                    type="button"
-                    className="btn-link"
-                    onClick={() => {
-                      setEditingGuestId(m.id)
-                      setEditingGuestName(m.name)
-                    }}
-                  >
-                    Rename
-                  </button>
-                  <button type="button" className="btn-link" onClick={() => getClaimLink(m)}>
-                    Get claim link
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-link dropdown-item-warn"
-                    onClick={() => toggleGuestActive(m, false)}
-                  >
-                    Remove
-                  </button>
-                </span>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <form onSubmit={submitAddGuest} className="inline-form">
-        <input
-          value={guestName}
-          onChange={(e) => setGuestName(e.target.value)}
-          placeholder="Guest's name"
-        />
-        <button type="submit" className="btn-primary">
-          Add guest
-        </button>
-      </form>
-        </>
-      )}
-
-      <h2 className="settings-section-title">Categories</h2>
-      <p className="muted">
-        Tag a bill (or an individual item, if it belongs somewhere else) with one of these to see
-        how you spend, not just how much, on the group's stats page.
-      </p>
-      <ul className="member-list">
-        {categories.map((cat) => (
-          <li key={cat.id} className="member-list-item">
-            {editingCategoryId === cat.id ? (
-              <form
-                className="guest-rename-form"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  saveCategoryRename(cat.id)
-                }}
-              >
-                <CategoryColorButton
-                  color={cat.color}
-                  onChangeColor={(color) => handleCategoryColorChange(cat.id, color)}
-                />
-                <input
-                  value={editingCategoryName}
-                  onChange={(e) => setEditingCategoryName(e.target.value)}
-                  autoFocus
-                />
-                <button type="submit" className="btn-link">
-                  Save
-                </button>
-                <button type="button" className="btn-link" onClick={() => setEditingCategoryId(null)}>
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <>
-                <span className="category-label">
-                  <CategoryColorButton
-                    color={cat.color}
-                    onChangeColor={(color) => handleCategoryColorChange(cat.id, color)}
-                  />
-                  {cat.name}
-                </span>
-                <span className="member-list-actions">
-                  <button
-                    type="button"
-                    className="btn-link"
-                    onClick={() => {
-                      setEditingCategoryId(cat.id)
-                      setEditingCategoryName(cat.name)
-                    }}
-                  >
-                    Rename
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-link dropdown-item-warn"
-                    onClick={() => handleDeleteCategory(cat)}
-                  >
-                    Delete
-                  </button>
-                </span>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <form onSubmit={submitAddCategory} className="inline-form category-add-form">
-        <input
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-          placeholder="New category"
-        />
-        <ColorSwatchPicker value={newCategoryColor} onChange={setNewCategoryColor} />
-        <button type="submit" className="btn-primary">
-          Add category
-        </button>
-      </form>
-
-      {/* Moved here from the group page's own bill-list controls — out of
-          the way for now; a better-integrated spot (surfacing due/upcoming
-          templates right on the group page, say) is future work, not this
-          round's. */}
-      <h2 className="settings-section-title">Recurring bills</h2>
-      <p className="muted">
-        Set up a bill (rent, a subscription, anything on a regular schedule) once and have it
-        generated for you automatically going forward.
-      </p>
-      <Link to={`/groups/${groupId}/recurring`} className="btn-link import-link">
-        Manage recurring bills →
-      </Link>
-
-      <h2 className="settings-section-title">Import data</h2>
-      <p className="muted">
-        Bring in a group's spending history from another app — realistically a one-time thing, so
-        it lives here rather than cluttering the group page itself.
-      </p>
-      <Link to={`/groups/${groupId}/import`} className="btn-link import-link">
-        Import bills from Splitwise (CSV)
-      </Link>
-      <Link to={`/groups/${groupId}/categorize`} className="btn-link import-link">
-        Categorize uncategorized bills
-      </Link>
-      {/* Personal-space only, for now — a bank statement genuinely covers
-          your own account either way, but a shared group's statement
-          import (whose account, who's the payer, splitting a shared bill
-          apart from the raw transaction list) is a different, bigger
-          feature than this one, not yet built. */}
-      {isPersonal && bankImportDraft && (
-        <Link to={`/groups/${groupId}/import-bank-statement`} className="btn-link import-link">
-          Resume bank statement import — {bankImportDraft.totalReviewable - bankImportDraft.reviewedCount} of{' '}
-          {bankImportDraft.totalReviewable} remaining
-        </Link>
-      )}
-      {isPersonal && !bankImportDraft && (
-        <Link to={`/groups/${groupId}/import-bank-statement`} className="btn-link import-link">
-          Import a bank statement
-        </Link>
-      )}
-
-      {formerRealMembers.length > 0 && (
-        <>
-          <h2 className="settings-section-title">Former members</h2>
-          <p className="muted">
-            They've left the group, but their bills, items, and payments are still kept — and their own
-            stats page keeps a frozen record of what they spent here. If they use the invite link again,
-            they'll pick up right where they left off.
-          </p>
-          <ul className="member-list">
-            {formerRealMembers.map((m) => (
-              <li key={m.id} className="member-list-item former">
-                <span>{m.name}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {archivedGuests.length > 0 && (
-        <>
-          <h2 className="settings-section-title">Archived guests</h2>
-          <p className="muted">
-            Kept on old bills, but won't be offered for new ones. Restore any time — or, if the
-            group's admin, delete one permanently instead. That only works once they're not on any
-            bill, payment, or recurring template anymore; otherwise it's blocked rather than
-            silently leaving something broken behind.
-          </p>
-          <ul className="member-list">
-            {archivedGuests.map((m) => (
-              <li key={m.id} className="member-list-item former">
-                <span>{m.name}</span>
-                <span className="member-list-actions">
-                  <button type="button" className="btn-link" onClick={() => toggleGuestActive(m, true)}>
-                    Restore
-                  </button>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      className="btn-link dropdown-item-warn"
-                      onClick={() => setDeleteGuestTarget(m)}
-                    >
-                      Delete permanently
-                    </button>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {deleteGuestTarget && (
-        <TypedConfirmModal
-          title="Delete guest permanently"
-          body={
-            <p>
-              This permanently deletes <strong>{deleteGuestTarget.name}</strong> from{' '}
-              <strong>{name}</strong> — this can't be undone. Only works if they're not on any
-              bill, payment, or recurring template anymore; if they are, this is blocked and says
-              so rather than leaving something broken behind.
-            </p>
-          }
-          confirmWord={deleteGuestTarget.name}
-          confirmLabel="Delete permanently"
-          pending={deletingGuest}
-          onConfirm={confirmDeleteGuestPermanently}
-          onCancel={() => setDeleteGuestTarget(null)}
-        />
-      )}
-
-      <h2 className="settings-section-title">Danger zone</h2>
-      <p className="muted">
-        Permanently deletes every bill in this group, along with their items and payer splits —
-        optionally its settle-up (payment) history too, your choice. Members and categories are
-        untouched either way. This can't be undone, and only the group admin can do it.
-      </p>
-      {isAdmin ? (
         <button
           type="button"
-          className="btn-danger"
-          disabled={!name.trim()}
-          onClick={() => setShowDeleteAllModal(true)}
+          className={`icon-btn${expanded ? ' active-toggle' : ''}`}
+          onClick={() => setExpanded((e) => !e)}
+          aria-label="Toggle menu"
+          aria-expanded={expanded}
         >
-          Delete all bills
+          <MenuIcon size={19} />
         </button>
-      ) : (
-        <p className="muted">Only the group admin can delete all bills in this group.</p>
-      )}
-      {showDeleteAllModal && (
-        <TypedConfirmModal
-          title="Delete all bills"
-          body={
-            <>
-              <p>
-                This permanently deletes every bill in <strong>{name}</strong> — all their items
-                and payer splits go with them. Members and categories stay untouched. This can't
-                be undone.
-              </p>
-              <label className="delete-all-payments-option">
-                <input
-                  type="checkbox"
-                  checked={deletePaymentsToo}
-                  onChange={(e) => setDeletePaymentsToo(e.target.checked)}
-                />
-                <span>Also delete all settle-up (payment) records</span>
-              </label>
-            </>
-          }
-          confirmWord={name}
-          confirmLabel="Delete all bills"
-          pending={deletingAllBills}
-          onConfirm={handleDeleteAllBills}
-          onCancel={() => {
-            setShowDeleteAllModal(false)
-            setDeletePaymentsToo(false)
-          }}
-        />
-      )}
+        <h1>{activeSection.label}</h1>
+      </header>
 
-      {error && <p className="status-error">{error}</p>}
+      <div className={`settings-shell${expanded ? ' expanded' : ''}`}>
+        <SettingsNav sections={sections} activeId={activeSection.id} onSelect={setActiveId} dangerId="danger" />
+        <div className="settings-content">
+          <Content isPersonal={isPersonal} />
+        </div>
+      </div>
     </div>
   )
 }

@@ -15,14 +15,20 @@ import {
 } from '../lib/recurringBills'
 import { useCurrency } from '../context/CurrencyContext'
 import { parseNumber } from '../lib/parseNumber'
-import BackButton from '../components/BackButton'
 
 const FREQUENCY_LABELS = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }
 
-// The "⋮" per-row menu — same shape as SettingsGroupsSection.jsx's own
-// GroupRowMenu (and BillActionsMenu.jsx before that), just with three items
-// instead of one. Kept local to this page rather than its own component
-// file, same reasoning as GroupRowMenu: only ever used here.
+// "Subscription" is user-facing terminology only — the database table
+// (recurring_bills), lib/recurringBills.js, and every function it exports
+// keep their original names throughout this file. Same reasoning as
+// "Spending thresholds" becoming "Budgets" everywhere it's actually
+// shown: renaming the schema/module too would cost a real migration and a
+// much wider rename for zero visible benefit.
+
+// The "⋮" per-row menu — same shape as GroupRowMenu/BillActionsMenu
+// elsewhere in the app, just with three items. Kept local to this file
+// rather than its own component, same reasoning as those: only ever used
+// here.
 function TemplateMenu({ template, onEdit, onTogglePause, onDelete }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
@@ -65,7 +71,7 @@ function todayInputValue() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function RecurringBills() {
+export default function GroupSubscriptionsSection() {
   const { groupId } = useParams()
   const { user } = useAuth()
   const { format } = useCurrency()
@@ -107,9 +113,9 @@ export default function RecurringBills() {
   }, [load])
 
   useEffect(() => {
-    // Default a brand new template to splitting with everyone currently
-    // active, same default every other "who splits this" control in the
-    // app uses — adjustable per-template afterward.
+    // Default a brand new subscription to splitting with everyone
+    // currently active, same default every other "who splits this"
+    // control in the app uses — adjustable per-subscription afterward.
     if (members.length > 0 && splitMemberIds.length === 0) {
       setSplitMemberIds(members.map((m) => m.id))
       setPaidBy((p) => p || members[0].id)
@@ -179,8 +185,9 @@ export default function RecurringBills() {
           startDate: new Date(`${startDate}T00:00:00`),
         })
         // Category/paidBy/split deliberately left as they are, not reset —
-        // adding several similar templates in a row (e.g. multiple bills
-        // split the same way) shouldn't mean re-picking those every time.
+        // adding several similar subscriptions in a row (e.g. multiple
+        // bills split the same way) shouldn't mean re-picking those every
+        // time.
         setTitle('')
         setAmount('')
       }
@@ -216,8 +223,8 @@ export default function RecurringBills() {
     setError(null)
     try {
       await deleteRecurringBill(supabase, deleteTarget.template.id, deleteOccurrences)
-      // Deleting the template you're mid-edit on would otherwise leave the
-      // form silently pointed at an id that no longer exists.
+      // Deleting the subscription you're mid-edit on would otherwise leave
+      // the form silently pointed at an id that no longer exists.
       if (deleteTarget.template.id === editingId) cancelEdit()
       setDeleteTarget(null)
       load()
@@ -232,12 +239,8 @@ export default function RecurringBills() {
   const categoryNameOf = (id) => categories.find((c) => c.id === id)?.name
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <BackButton to={`/groups/${groupId}`} />
-        <h1>Recurring bills</h1>
-      </header>
-
+    <>
+      <h2 className="settings-section-title">Subscriptions</h2>
       <p className="muted">
         A template for something that repeats — rent, a subscription, a utility bill. The next
         occurrence is created automatically the next time anyone opens this group on or after its
@@ -276,15 +279,10 @@ export default function RecurringBills() {
         </ul>
       )}
 
-      <h2 className="settings-section-title">{editingId ? 'Edit recurring bill' : 'New recurring bill'}</h2>
+      <h2 className="settings-section-title">{editingId ? 'Edit subscription' : 'New subscription'}</h2>
       <form onSubmit={submitForm} className="recurring-form" ref={formRef}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Rent)" />
-        <input
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Amount"
-          inputMode="decimal"
-        />
+        <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" inputMode="decimal" />
 
         <div className="recurring-form-row">
           <label className="muted">
@@ -314,8 +312,8 @@ export default function RecurringBills() {
 
         {editingId ? (
           <p className="muted">
-            Frequency and start date can't be changed here — delete the template and set up a new
-            one if the schedule itself needs to change.
+            Frequency and start date can't be changed here — delete this subscription and set up a
+            new one if the schedule itself needs to change.
           </p>
         ) : (
           <div className="recurring-form-row">
@@ -340,11 +338,7 @@ export default function RecurringBills() {
             <div className="chip-row">
               {members.map((m) => (
                 <label key={m.id} className={splitMemberIds.includes(m.id) ? 'buyer-chip active' : 'buyer-chip'}>
-                  <input
-                    type="checkbox"
-                    checked={splitMemberIds.includes(m.id)}
-                    onChange={() => toggleSplitMember(m.id)}
-                  />
+                  <input type="checkbox" checked={splitMemberIds.includes(m.id)} onChange={() => toggleSplitMember(m.id)} />
                   {m.name}
                 </label>
               ))}
@@ -354,7 +348,7 @@ export default function RecurringBills() {
 
         <div className="recurring-form-actions">
           <button type="submit" className="btn-primary recurring-submit-btn" disabled={!canSubmit}>
-            {editingId ? 'Save changes' : 'Add recurring bill'}
+            {editingId ? 'Save changes' : 'Add subscription'}
           </button>
           {/* Stands in for the button while it's faded out — same fields
               gate both, so this only ever shows exactly when the button
@@ -374,38 +368,23 @@ export default function RecurringBills() {
             <h2>Delete "{deleteTarget.template.title}"?</h2>
             {deleteTarget.count > 0 ? (
               <p>
-                This template has already created {deleteTarget.count}{' '}
-                {deleteTarget.count === 1 ? 'bill' : 'bills'} (totaling {format(deleteTarget.total)}).
-                Deleting just the template leaves those bills exactly as they are — pick "Delete the
-                bills too" only if this template was a mistake you want undone entirely, not kept.
+                This subscription has already created {deleteTarget.count}{' '}
+                {deleteTarget.count === 1 ? 'bill' : 'bills'} (totaling {format(deleteTarget.total)}). Deleting just
+                the subscription leaves those bills exactly as they are — pick "Delete the bills too" only if this
+                subscription was a mistake you want undone entirely, not kept.
               </p>
             ) : (
-              <p>This template hasn't created any bills yet.</p>
+              <p>This subscription hasn't created any bills yet.</p>
             )}
             <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-link"
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-              >
+              <button type="button" className="btn-link" onClick={() => setDeleteTarget(null)} disabled={deleting}>
                 Cancel
               </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => confirmDelete(false)}
-                disabled={deleting}
-              >
+              <button type="button" className="btn-secondary" onClick={() => confirmDelete(false)} disabled={deleting}>
                 {deleting ? 'Deleting…' : 'Keep the bills'}
               </button>
               {deleteTarget.count > 0 && (
-                <button
-                  type="button"
-                  className="btn-danger"
-                  onClick={() => confirmDelete(true)}
-                  disabled={deleting}
-                >
+                <button type="button" className="btn-danger" onClick={() => confirmDelete(true)} disabled={deleting}>
                   {deleting ? 'Deleting…' : 'Delete the bills too'}
                 </button>
               )}
@@ -413,6 +392,6 @@ export default function RecurringBills() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
