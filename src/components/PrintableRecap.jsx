@@ -87,6 +87,43 @@ export function PrintableSettlementRecap({ groupName, transactions, members }) {
   )
 }
 
+// `recap` is the same shape formatPersonalSpaceRecap() takes.
+export function PrintablePersonalSpaceRecap({ recap }) {
+  const { format } = useCurrency()
+  if (!recap) return null
+  const { groupName, totalSpent, billCount, categoryRows } = recap
+
+  return (
+    <PrintPortal>
+      <div className="print-only">
+        <h1>{groupName}</h1>
+        {billCount === 0 ? (
+          <p>No bills yet.</p>
+        ) : (
+          <p>
+            Total spent: <span className="mono">{format(totalSpent)}</span>
+            {' · '}
+            {billCount} bill{billCount === 1 ? '' : 's'}
+          </p>
+        )}
+
+        <PrintStatsSection
+          title="By category"
+          rows={categoryRows}
+          renderRow={(c) => (
+            <tr key={c.key}>
+              <td>{c.name}</td>
+              <td className="mono">{format(c.amount)}</td>
+            </tr>
+          )}
+        />
+
+        <p className="print-footer">Generated {new Date().toLocaleDateString()}</p>
+      </div>
+    </PrintPortal>
+  )
+}
+
 // Shared by both stats recaps below — a titled table that simply doesn't
 // render at all when there are no rows for it, the same "only show a
 // section if it has something in it" rule every one of these sections

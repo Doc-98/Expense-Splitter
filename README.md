@@ -746,8 +746,22 @@ group page's own trigger and both stats pages' own headers (next to their
 "see graphs" icon) — the same component either way, just a glyph instead of
 a text label, with its own props for which of the three options above
 actually apply (`getText`/`title` gate the first two together;
-`onExportCsv` gates the third independently, since a personal space still
-wants CSV with nothing to "share as text").
+`onExportCsv` gates the third independently, so any group can offer all
+three at once).
+
+A personal space's share icon offers the exact same three options as a real
+group's — the underlying recap is just a different shape, since there's
+nobody to owe or be owed. `formatPersonalSpaceRecap()`/
+`PrintablePersonalSpaceRecap` share total spent, bill count, and a by-category
+breakdown, built entirely from `bills`/`categories` already sitting in
+`GroupView.jsx`'s own state (`GROUP_BILLS_SELECT` already carries each
+item's `total_price`/`category_id`) rather than a fresh fetch the way
+sharing one bill or a few selected ones does — `ShareButton`'s `getText` is
+called synchronously, and "Download as PDF" needs its printable content
+already in the DOM the instant `window.print()` fires, so neither has
+anywhere to `await` an on-demand round-trip. A full itemized transcript
+(needing each item's name/quantity, not just its total) stays exactly what
+selecting bills and sharing them from the list itself is for.
 
 ### Importing from Splitwise
 

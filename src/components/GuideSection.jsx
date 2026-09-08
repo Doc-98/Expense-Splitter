@@ -343,7 +343,9 @@ const GROUPS = [
             <p>
               A single bill, and a group's page (the share icon next to Stats and Settings), each
               have a <strong>Share</strong> button — tap it for a small menu with every way to get
-              that data out:
+              that data out. Your Personal space works the same way; since there's nobody else to
+              split with, its recap is total spent and a by-category breakdown instead of who owes
+              whom.
             </p>
             <ul>
               <li>

@@ -10,7 +10,7 @@ import { groupViewCache } from '../lib/groupViewCache'
 import { GROUP_BILLS_SELECT, computeGroupViewSnapshot } from '../lib/groupViewSnapshot'
 import { getStatsWindowStart } from '../lib/timeRange'
 import { recordGroupVisit } from '../lib/recentGroups'
-import { formatSettlementRecap, formatMultiBillRecap } from '../lib/recapText'
+import { formatSettlementRecap, formatMultiBillRecap, formatPersonalSpaceRecap } from '../lib/recapText'
 import { shareOrCopyText } from '../lib/shareText'
 import { filterBills, billTotal } from '../lib/billFilters'
 import { useEscapeKey } from '../lib/useEscapeKey'
@@ -26,7 +26,7 @@ import ShareButton from '../components/ShareButton'
 import Pagination from '../components/Pagination'
 import BillActionsMenu from '../components/BillActionsMenu'
 import RangeSlider from '../components/RangeSlider'
-import { PrintableSettlementRecap } from '../components/PrintableRecap'
+import { PrintableSettlementRecap, PrintablePersonalSpaceRecap } from '../components/PrintableRecap'
 import { SearchIcon, PieChartIcon, SettingsIcon, ArrowRightIcon } from '../components/icons'
 import BackButton from '../components/BackButton'
 
@@ -720,29 +720,67 @@ export default function GroupView() {
     }
   }
 
+  // The personal-space "Share" recap (see the header ShareButton below) —
+  // deliberately built from `bills`/`categories` already in state rather
+  // than a fresh fetch like exportGroupCsv/shareBills above: ShareButton's
+  // getText is called synchronously (same as formatSettlementRecap's own
+  // `settlement` for a real group) and "Download as PDF" needs the printed
+  // content already sitting in the DOM the instant window.print() fires —
+  // neither has anywhere to await an async fetch. bills' own item rows
+  // already carry total_price/category_id (GROUP_BILLS_SELECT), which is
+  // all a total-and-by-category summary needs; only a full itemized
+  // transcript (name/quantity per item) would need the heavier fetch those
+  // two functions do, and that's exactly what selecting bills and sharing
+  // them from the list itself already covers for whoever wants that level
+  // of detail on a specific subset instead of "the whole space, right now."
+  const personalRecap = group?.is_personal
+    ? (() => {
+        const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
+        const byCategory = new Map() // name -> amount
+        let totalSpent = 0
+        for (const bill of bills || []) {
+          for (const item of bill.items || []) {
+            const amount = Number(item.total_price)
+            totalSpent += amount
+            const name = categoryNameById.get(item.category_id) || 'Uncategorized'
+            byCategory.set(name, (byCategory.get(name) || 0) + amount)
+          }
+        }
+        const categoryRows = [...byCategory.entries()]
+          .map(([name, amount]) => ({ key: name, name, amount }))
+          .sort((a, b) => b.amount - a.amount)
+        return { groupName: group?.name, totalSpent, billCount: (bills || []).length, categoryRows }
+      })()
+    : null
+
   return (
     <div className="page">
       <header className="page-header">
         <BackButton to="/" label="Groups" />
         <h1>{group?.name}</h1>
         {/* Share/Stats/Settings, grouped together as icon-only controls —
-            Share here is the group-level action (settle-up recap text/PDF,
-            merged with the CSV export that used to sit in its own button
-            further down the page, see ShareButton's onExportCsv). Gated
-            the same way that bottom section used to be: something to
-            share only exists once settlement itself has loaded, and only
-            actually offers anything once there's either a settle-up to
-            share (any real group) or bills to export (personal included). */}
-        {settlement && (!group?.is_personal || (bills && bills.length > 0)) && (
+            Share here is the group-level action (settle-up recap text/PDF
+            for a real group, the personal-space recap above for one's own
+            space — see personalRecap's own comment for why that one's
+            built differently), merged with the CSV export that used to sit
+            in its own button further down the page (ShareButton's
+            onExportCsv). Gated only on settlement itself having loaded —
+            same for both group types now: formatSettlementRecap already
+            handles an empty settlement ("Everyone's even") gracefully, and
+            formatPersonalSpaceRecap does the same for zero bills ("No
+            bills yet") — onExportCsv is the one part still separately
+            gated on bills actually existing, since there's nothing
+            sensible to export otherwise. */}
+        {settlement && (
           <ShareButton
             icon
             menuAlign="right"
-            label={group?.is_personal ? 'Export' : 'Share settle-up'}
-            title={!group?.is_personal ? `Settle up — ${group?.name}` : undefined}
+            label={group?.is_personal ? 'Share' : 'Share settle-up'}
+            title={group?.is_personal ? group?.name : `Settle up — ${group?.name}`}
             getText={
-              !group?.is_personal
-                ? () => formatSettlementRecap(group?.name, settlement, allMembers, format)
-                : undefined
+              group?.is_personal
+                ? () => formatPersonalSpaceRecap(personalRecap, format)
+                : () => formatSettlementRecap(group?.name, settlement, allMembers, format)
             }
             onExportCsv={bills && bills.length > 0 ? exportGroupCsv : undefined}
           />
@@ -1047,14 +1085,17 @@ export default function GroupView() {
       {/* Share settle-up + Export CSV both moved up into the page header
           (see the icon-only ShareButton next to Stats/Settings) — this
           used to be its own row down here with the same two actions, and
-          its own divider above it. PrintableSettlementRecap still needs to
-          render somewhere on the page for that header button's "Download
-          as PDF" to have anything to print; it doesn't need to sit
-          visually next to the button that triggers it, and contributes no
-          visible spacing of its own (print-only). "Quick stats" below
-          already draws its own divider (.group-stats-preview-title) — a
-          second one here would just double up. */}
-      {!group?.is_personal && (
+          its own divider above it. One of these two Printable* components
+          still needs to render somewhere on the page for that header
+          button's "Download as PDF" to have anything to print; neither
+          needs to sit visually next to the button that triggers it, and
+          contributes no visible spacing of its own (print-only). "Quick
+          stats" below already draws its own divider
+          (.group-stats-preview-title) — a second one here would just
+          double up. */}
+      {group?.is_personal ? (
+        <PrintablePersonalSpaceRecap recap={personalRecap} />
+      ) : (
         <PrintableSettlementRecap groupName={group?.name} transactions={settlement} members={allMembers} />
       )}
 
