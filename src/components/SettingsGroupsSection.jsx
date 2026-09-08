@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClickOutside } from '../lib/useClickOutside'
 import { snapshotAndRemoveMember } from '../lib/leaveGroup'
 import { loadErrorMessage } from '../lib/loadErrorMessage'
+import { getGroupViewPreferences, setGroupViewPreferences } from '../lib/groupViewPreferences'
 import ConfirmSheet from './ConfirmSheet'
 
 // The "⋮" per-row menu — same shape as BillActionsMenu.jsx's, just with
@@ -51,6 +52,11 @@ export default function SettingsGroupsSection() {
   const [error, setError] = useState(null)
   const [pendingLeave, setPendingLeave] = useState(null) // { id, name, memberId } | null
   const [leaving, setLeaving] = useState(false)
+  const [prefs, setPrefs] = useState(getGroupViewPreferences)
+
+  function updatePref(partial) {
+    setPrefs(setGroupViewPreferences(partial))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -138,6 +144,36 @@ export default function SettingsGroupsSection() {
 
   return (
     <>
+      <h2 className="settings-section-title">Display</h2>
+      <p className="muted">
+        Applies to every group's page alike, not one at a time — if you don't want these, you
+        almost certainly don't want them anywhere.
+      </p>
+      <div className="settings-row">
+        <span>Show Quick stats on the group page</span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={prefs.showQuickStats}
+            onChange={(e) => updatePref({ showQuickStats: e.target.checked })}
+            aria-label="Show Quick stats on the group page"
+          />
+          <span className="switch-slider" />
+        </label>
+      </div>
+      <div className="settings-row">
+        <span>Show "You lent/borrowed" on each bill</span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={prefs.showLentBorrowedStatus}
+            onChange={(e) => updatePref({ showLentBorrowedStatus: e.target.checked })}
+            aria-label="Show 'You lent' or 'You borrowed' status on each bill"
+          />
+          <span className="switch-slider" />
+        </label>
+      </div>
+
       <h2 className="settings-section-title">Your groups</h2>
       <p className="muted">
         Leaving a group here does the same thing as Leave in that group's own Settings — this is
