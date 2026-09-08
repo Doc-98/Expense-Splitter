@@ -25,12 +25,6 @@ export function granularityLabel(g) {
   return g === 'all' ? 'All time' : g.charAt(0).toUpperCase() + g.slice(1)
 }
 
-// defaultGranularity/onSetDefault are both optional — omit them and this
-// renders exactly as it always has, with no outline and no "Set as
-// default" link. Your Stats and every group's Stats page both pass them,
-// reading/writing the same shared, per-device preference (see
-// src/lib/statsPreferences.js), so the default period behaves identically
-// no matter which stats page you're looking at.
 export default function TimeRangeSelector({
   granularity,
   setGranularity,
@@ -38,8 +32,6 @@ export default function TimeRangeSelector({
   setOffset,
   label,
   yearLabel,
-  defaultGranularity,
-  onSetDefault,
 }) {
   function changeGranularity(g) {
     setGranularity(g)
@@ -89,24 +81,13 @@ export default function TimeRangeSelector({
           <button
             key={g}
             type="button"
-            className={['tab', granularity === g && 'active', defaultGranularity === g && 'tab-is-default']
-              .filter(Boolean)
-              .join(' ')}
+            className={['tab', granularity === g && 'active'].filter(Boolean).join(' ')}
             onClick={() => changeGranularity(g)}
           >
             {granularityLabel(g)}
           </button>
         ))}
       </div>
-      {onSetDefault && defaultGranularity && defaultGranularity !== granularity && (
-        <button
-          type="button"
-          className="btn-link time-range-set-default"
-          onClick={() => onSetDefault(granularity)}
-        >
-          Set {granularityLabel(granularity)} as default
-        </button>
-      )}
       {granularity !== 'all' && (
         <div className="time-range-nav">
           {leftSteps.map((t) => (

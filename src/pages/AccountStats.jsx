@@ -10,7 +10,7 @@ import { fetchThresholds } from '../lib/thresholds'
 import { fetchAllRows } from '../lib/fetchAllRows'
 import { loadErrorMessage } from '../lib/loadErrorMessage'
 import { accountStatsCache } from '../lib/accountStatsCache'
-import { getStatsPreferences, setStatsPreferences } from '../lib/statsPreferences'
+import { getStatsPreferences } from '../lib/statsPreferences'
 import {
   getPeriodRange,
   filterByDateRange,
@@ -63,11 +63,10 @@ export default function AccountStats() {
   // frozen point in time.
   const [granularity, setGranularity] = useState(() => getStatsPreferences().defaultGranularity)
   const [offset, setOffset] = useState(0)
-  // Separate from `granularity` above (which changes as you browse around)
-  // so the TimeRangeSelector outline can move the instant "Set as default"
-  // is clicked, without needing a reload to reflect the new saved value.
-  const [defaultGranularity, setDefaultGranularity] = useState(() => getStatsPreferences().defaultGranularity)
-  const [thresholdsPosition, setThresholdsPosition] = useState(() => getStatsPreferences().thresholdsPosition)
+  // No setter — this page only ever reads it, same "read once on mount"
+  // reasoning as granularity above. Both preferences are set exclusively
+  // from Settings → Profile now, not from any control on this page itself.
+  const [thresholdsPosition] = useState(() => getStatsPreferences().thresholdsPosition)
   const [error, setError] = useState(null)
   // 'loading' until the background backfill (see load() below) finishes,
   // 'complete' once every one of my groups' full history is in rawBills,
@@ -78,17 +77,6 @@ export default function AccountStats() {
   // here is gated on historyStatus alone, not on isViewCovered.
   const [historyStatus, setHistoryStatus] = useState('loading')
   const [historyWindowStart, setHistoryWindowStart] = useState(null)
-
-  function handleSetDefaultGranularity(g) {
-    setStatsPreferences({ defaultGranularity: g })
-    setDefaultGranularity(g)
-  }
-
-  function toggleThresholdsPosition() {
-    const next = thresholdsPosition === 'top' ? 'bottom' : 'top'
-    setStatsPreferences({ thresholdsPosition: next })
-    setThresholdsPosition(next)
-  }
 
   const BILLS_SELECT =
     'id, group_id, title, created_at, paid_by, category_id, items(id, total_price, category_id, item_shares(member_id, shares)), bill_payers(member_id, amount)'
@@ -315,8 +303,8 @@ export default function AccountStats() {
 
   // Budgets are always compared against the current calendar month
   // specifically, independent of whatever period this page's own selector
-  // is showing above (see Budgets.jsx for why) — a separate, fixed date
-  // range from the granularity/offset-driven one above.
+  // is showing above (see BudgetsSection.jsx for why) — a separate, fixed
+  // date range from the granularity/offset-driven one above.
   const thisMonth = getPeriodRange('month', 0)
   const monthFiltered = filterByDateRange(rawBills, rawItems, rawShares, thisMonth.start, thisMonth.end)
   const myParticipantIds = new Set(myParticipantByGroup.values())
@@ -572,10 +560,8 @@ export default function AccountStats() {
       </div>
       <p className="muted stats-note">
         Always this calendar month, and always your own share — not scoped to the period
-        selected above. <Link to="/budgets">Manage budgets →</Link>{' · '}
-        <button type="button" className="btn-link" onClick={toggleThresholdsPosition}>
-          {thresholdsPosition === 'top' ? 'Show at bottom instead' : 'Show at top instead'}
-        </button>
+        selected above. Manage budgets from <strong>Settings → Budgets</strong>; where this
+        section sits on the page is set from <strong>Settings → Profile</strong>.
       </p>
     </>
   )
@@ -585,8 +571,20 @@ export default function AccountStats() {
       <header className="page-header">
         <BackButton to="/" label="Groups" />
         <h1>Your stats</h1>
+        {/* Share (icon mode, same as GroupView.jsx's header) sits left of
+            Graphs — the two are the only header controls here, so
+            menuAlign="right" (its popover opening from the right edge)
+            keeps it from spilling past the page edge the way it would
+            opening left of a button already near the right side. */}
+        <ShareButton
+          icon
+          menuAlign="right"
+          label="Share recap"
+          title="Your stats"
+          getText={() => formatAccountStatsRecap(recap, format)}
+        />
         <Link to="/stats/graphs" className="icon-btn" aria-label="See graphs" title="See graphs">
-          <LineChartIcon />
+          <LineChartIcon size={40} />
         </Link>
       </header>
 
@@ -617,8 +615,6 @@ export default function AccountStats() {
             setOffset={setOffset}
             label={label}
             yearLabel={yearLabel}
-            defaultGranularity={defaultGranularity}
-            onSetDefault={handleSetDefaultGranularity}
           />
 
           <div className="stats-summary">
@@ -734,9 +730,6 @@ export default function AccountStats() {
 
           {thresholdsPosition === 'bottom' && thresholdsSection}
 
-          <div className="recap-actions">
-            <ShareButton label="Share recap" title="Your stats" getText={() => formatAccountStatsRecap(recap, format)} />
-          </div>
           <PrintableAccountStatsRecap recap={recap} />
         </>
       )}
