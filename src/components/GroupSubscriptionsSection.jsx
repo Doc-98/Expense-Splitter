@@ -287,11 +287,11 @@ export default function GroupSubscriptionsSection() {
       )}
 
       <h2 className="settings-section-title">{editingId ? 'Edit subscription' : 'New subscription'}</h2>
-      <form onSubmit={submitForm} className="recurring-form" ref={formRef}>
+      <form onSubmit={submitForm} className="stacked-form" ref={formRef}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Rent)" />
         <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" inputMode="decimal" />
 
-        <div className="recurring-form-row">
+        <div className="stacked-form-row">
           <label className="muted">
             Category
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
@@ -323,7 +323,7 @@ export default function GroupSubscriptionsSection() {
             new one if the schedule itself needs to change.
           </p>
         ) : (
-          <div className="recurring-form-row">
+          <div className="stacked-form-row">
             <label className="muted">
               Repeats
               <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
@@ -353,14 +353,14 @@ export default function GroupSubscriptionsSection() {
           </>
         )}
 
-        <div className="recurring-form-actions">
-          <button type="submit" className="btn-primary recurring-submit-btn" disabled={!canSubmit}>
+        <div className="stacked-form-actions">
+          <button type="submit" className="btn-primary form-submit-btn" disabled={!canSubmit}>
             {editingId ? 'Save changes' : 'Add subscription'}
           </button>
           {/* Stands in for the button while it's faded out — same fields
               gate both, so this only ever shows exactly when the button
               itself isn't there to explain its own absence. */}
-          {!canSubmit && <span className="recurring-submit-hint">Fill in a title and an amount to continue</span>}
+          {!canSubmit && <span className="form-submit-hint">Fill in a title and an amount to continue</span>}
           {editingId && (
             <button type="button" className="btn-link" onClick={cancelEdit}>
               Cancel

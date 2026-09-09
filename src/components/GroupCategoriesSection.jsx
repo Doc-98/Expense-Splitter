@@ -1,9 +1,48 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchCategories, addCategory, renameCategory, deleteCategory, updateCategoryColor, CATEGORY_COLORS } from '../lib/categories'
 import { groupCategoriesCache } from '../lib/groupCategoriesCache'
+import { useClickOutside } from '../lib/useClickOutside'
 import ColorSwatchPicker from './ColorSwatchPicker'
 import CategoryColorButton from './CategoryColorButton'
+
+// The "⋮" per-row menu — same shape as GroupSubscriptionsSection.jsx's own
+// TemplateMenu (Rename/Delete instead of Edit/Pause/Delete). Kept local to
+// this file rather than its own component, same reasoning as that one:
+// only ever used here.
+function CategoryMenu({ category, onRename, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+  useClickOutside(wrapRef, () => setOpen(false), open)
+
+  function run(action) {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div className="row-menu-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="row-menu-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={`Actions for ${category.name}`}
+      >
+        ⋮
+      </button>
+      {open && (
+        <div className="row-menu-popover">
+          <button type="button" className="dropdown-item" onClick={() => run(onRename)}>
+            Rename
+          </button>
+          <button type="button" className="dropdown-item dropdown-item-warn" onClick={() => run(onDelete)}>
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function GroupCategoriesSection() {
   const { groupId } = useParams()
@@ -122,32 +161,32 @@ export default function GroupCategoriesSection() {
                   <CategoryColorButton color={cat.color} onChangeColor={(color) => handleCategoryColorChange(cat.id, color)} />
                   {cat.name}
                 </span>
-                <span className="member-list-actions">
-                  <button
-                    type="button"
-                    className="btn-link"
-                    onClick={() => {
-                      setEditingCategoryId(cat.id)
-                      setEditingCategoryName(cat.name)
-                    }}
-                  >
-                    Rename
-                  </button>
-                  <button type="button" className="btn-link dropdown-item-warn" onClick={() => handleDeleteCategory(cat)}>
-                    Delete
-                  </button>
-                </span>
+                <CategoryMenu
+                  category={cat}
+                  onRename={() => {
+                    setEditingCategoryId(cat.id)
+                    setEditingCategoryName(cat.name)
+                  }}
+                  onDelete={() => handleDeleteCategory(cat)}
+                />
               </>
             )}
           </li>
         ))}
       </ul>
-      <form onSubmit={submitAddCategory} className="inline-form category-add-form">
+      <h2 className="settings-section-title">New category</h2>
+      <form onSubmit={submitAddCategory} className="stacked-form">
         <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category" />
         <ColorSwatchPicker value={newCategoryColor} onChange={setNewCategoryColor} />
-        <button type="submit" className="btn-primary">
-          Add category
-        </button>
+        <div className="stacked-form-actions">
+          <button type="submit" className="btn-primary form-submit-btn" disabled={!newCategoryName.trim()}>
+            Add category
+          </button>
+          {/* Stands in for the button while it's faded out — same field
+              gates it, so this only ever shows exactly when the button
+              itself isn't there to explain its own absence. */}
+          {!newCategoryName.trim() && <span className="form-submit-hint">Type a name to continue</span>}
+        </div>
       </form>
 
       {error && <p className="status-error">{error}</p>}
