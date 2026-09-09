@@ -5,6 +5,7 @@ import { groupCategoriesCache } from '../lib/groupCategoriesCache'
 import { useClickOutside } from '../lib/useClickOutside'
 import ColorSwatchPicker from './ColorSwatchPicker'
 import CategoryColorButton from './CategoryColorButton'
+import { ArrowRightIcon } from './icons'
 
 // The "⋮" per-row menu — same shape as GroupSubscriptionsSection.jsx's own
 // TemplateMenu (Rename/Delete instead of Edit/Pause/Delete). Kept local to
@@ -175,18 +176,25 @@ export default function GroupCategoriesSection() {
         ))}
       </ul>
       <h2 className="settings-section-title">New category</h2>
+      {/* Same input-with-submit pattern as Create group/Add bill/Group
+          name — the color picker is a second, non-blocking field (it
+          always already holds a value, defaulting to the first preset),
+          so unlike "Add subscription" this still has exactly one field
+          that gates submission, and stays a single arrow-in-the-field
+          rather than a separate labeled pill. */}
       <form onSubmit={submitAddCategory} className="stacked-form">
-        <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category" />
-        <ColorSwatchPicker value={newCategoryColor} onChange={setNewCategoryColor} />
-        <div className="stacked-form-actions">
-          <button type="submit" className="btn-primary form-submit-btn" disabled={!newCategoryName.trim()}>
-            Add category
+        <div className="input-with-submit">
+          <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category" />
+          <button
+            type="submit"
+            className="input-submit-btn"
+            disabled={!newCategoryName.trim()}
+            aria-label="Add category"
+          >
+            <ArrowRightIcon size={16} />
           </button>
-          {/* Stands in for the button while it's faded out — same field
-              gates it, so this only ever shows exactly when the button
-              itself isn't there to explain its own absence. */}
-          {!newCategoryName.trim() && <span className="form-submit-hint">Type a name to continue</span>}
         </div>
+        <ColorSwatchPicker value={newCategoryColor} onChange={setNewCategoryColor} />
       </form>
 
       {error && <p className="status-error">{error}</p>}
