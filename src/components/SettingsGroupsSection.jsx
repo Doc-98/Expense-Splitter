@@ -179,6 +179,23 @@ export default function SettingsGroupsSection() {
           <span className="switch-slider" />
         </label>
       </div>
+      <div className="settings-row">
+        <span>Sticky filters</span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={prefs.stickyFilters}
+            onChange={(e) => updatePref({ stickyFilters: e.target.checked })}
+            aria-label="Keep a group page's search and filters active after opening a bill"
+          />
+          <span className="switch-slider" />
+        </label>
+      </div>
+      <p className="muted">
+        When on, a group page's search box and filters stay exactly as you left them after you
+        open a bill and come back — right now they reset the moment you leave. Off (the default)
+        keeps today's behavior. Either way, reloading the page itself still clears them.
+      </p>
 
       {pendingLeave && (
         <ConfirmSheet
