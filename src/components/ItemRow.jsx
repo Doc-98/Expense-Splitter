@@ -1,5 +1,5 @@
 import { useCurrency } from '../context/CurrencyContext'
-import { parseNumber } from '../lib/parseNumber'
+import { parseNumber, parseAmount } from '../lib/parseNumber'
 import InlineEditable from './InlineEditable'
 
 // onUpdate(field, value) is called with one of 'name' | 'unit_price' |
@@ -44,8 +44,13 @@ export default function ItemRow({
     if (trimmed) onUpdate('name', trimmed)
   }
 
+  // The two money fields go through parseAmount, not plain parseNumber —
+  // typing a quick "2,30-1,25" to fix a price by hand is exactly what
+  // this row's own inline edit is for (see parseNumber.js for why that's
+  // opt-in rather than every numeric field here getting it for free;
+  // quantity below deliberately still uses plain parseNumber).
   function saveUnitPrice(value) {
-    const price = parseNumber(value)
+    const price = parseAmount(value)
     if (!Number.isNaN(price)) onUpdate('unit_price', price)
   }
 
@@ -55,7 +60,7 @@ export default function ItemRow({
   }
 
   function saveTotalPrice(value) {
-    const total = parseNumber(value)
+    const total = parseAmount(value)
     if (!Number.isNaN(total)) onUpdate('total_price', total)
   }
 
@@ -87,7 +92,7 @@ export default function ItemRow({
                 className="item-editable"
                 inputClassName="item-editable-input item-money-input"
                 inputMode="decimal"
-                pattern="-?[0-9]*\.?[0-9]*"
+                pattern="[-+*/0-9.,() ]*"
                 value={String(item.unit_price)}
                 display={format(item.unit_price)}
                 onSave={saveUnitPrice}
@@ -110,7 +115,7 @@ export default function ItemRow({
           className="item-editable mono item-price"
           inputClassName="item-editable-input item-money-input"
           inputMode="decimal"
-          pattern="-?[0-9]*\.?[0-9]*"
+          pattern="[-+*/0-9.,() ]*"
           value={String(item.total_price)}
           display={format(item.total_price)}
           onSave={saveTotalPrice}

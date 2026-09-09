@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { fetchAllGroupMembers } from '../lib/members'
 import { fetchCategories } from '../lib/categories'
-import { parseNumber } from '../lib/parseNumber'
+import { parseNumber, parseAmount } from '../lib/parseNumber'
 import { toDateInputValue, applyDateInputValue } from '../lib/billDate'
 import InlineEditable from '../components/InlineEditable'
 import { formatBillRecap } from '../lib/recapText'
@@ -159,7 +159,12 @@ export default function BillView() {
     e.preventDefault()
     if (!newItem.name.trim()) return
     const quantity = parseNumber(newItem.quantity) || 1
-    const unitPrice = parseNumber(newItem.price) || 0
+    // Price alone goes through parseAmount, not plain parseNumber — this
+    // is the one field someone might type a quick "2,30-1,25" into by
+    // hand (splitting a shared line total, subtracting a discount) — see
+    // parseNumber.js for why that's a distinct, opt-in function rather
+    // than something every numeric field on this page just gets for free.
+    const unitPrice = parseAmount(newItem.price) || 0
 
     await insertItemWithShares(newItem.name.trim(), unitPrice, quantity, defaultBuyerIds)
 
@@ -503,11 +508,18 @@ export default function BillView() {
           ref={priceRef}
           placeholder="Price"
           inputMode="decimal"
-          // A pattern that itself contains "-" is what gets iOS to add a
-          // minus key to its decimal pad — without it, that keyboard has
-          // no way to type one at all, making a negative price (a
-          // discount line) impossible to enter on iPhone.
-          pattern="-?[0-9]*\.?[0-9]*"
+          // Deliberately permissive — a real character allowlist, not an
+          // attempt at validating a well-formed number/expression (that's
+          // parseAmount's job downstream, which already fails gracefully
+          // on garbage). This exists to get iOS to add a minus key to its
+          // decimal pad (any pattern containing "-" does that), and now
+          // also to admit everything parseAmount accepts — digits, either
+          // decimal separator, and a small arithmetic expression like
+          // "2,30-1,25" — without the browser's own pattern validation
+          // silently blocking the submit before it ever reaches that
+          // parsing. A stricter pattern here would just be two different
+          // definitions of "valid" to keep in sync for no real benefit.
+          pattern="[-+*/0-9.,() ]*"
           value={newItem.price}
           onChange={(e) => setNewItem((v) => ({ ...v, price: e.target.value }))}
         />
