@@ -27,6 +27,12 @@ import { useEffect, useRef, useState } from 'react'
 // "YYYY-MM-DD" format either way; the empty-reverts-always rule above
 // applies to that the same as any other value.
 //
+// `pattern` (optional) is passed straight through too — its only real use
+// here is the iOS-specific quirk where a decimal-pad <input> only gets a
+// minus key if its `pattern` attribute itself contains a "-" (see
+// ItemRow.jsx's unit/total price fields, where a negative value is a
+// legitimate discount line, not a mistake to block).
+//
 // `multiline` (default false) swaps the single-line <input> for a
 // <textarea> while editing — for a value that can run long enough to
 // need wrapping to stay fully visible/editable (a bank-import
@@ -40,6 +46,7 @@ export default function InlineEditable({
   onSave,
   inputMode,
   inputType = 'text',
+  pattern,
   multiline = false,
   className,
   inputClassName,
@@ -98,6 +105,7 @@ export default function InlineEditable({
         type={inputType}
         className={inputClassName}
         inputMode={inputMode}
+        pattern={pattern}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}

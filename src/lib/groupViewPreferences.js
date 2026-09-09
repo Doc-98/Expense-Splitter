@@ -15,6 +15,14 @@ const DEFAULTS = {
   // (see GroupView.jsx), since it never says anything there a personal
   // user doesn't already know.
   showLentBorrowedStatus: true,
+  // Off by default — the existing "opening a bill clears your filters"
+  // behavior is what every group page has always done, so this stays
+  // opt-in rather than changing that out from under anyone who never
+  // asked for it. When on, GroupView.jsx keeps its search box and filters
+  // exactly as they were across navigating to a bill and back (see
+  // groupFilterState.js) instead of resetting them the moment the page
+  // remounts.
+  stickyFilters: false,
 }
 
 export function getGroupViewPreferences() {

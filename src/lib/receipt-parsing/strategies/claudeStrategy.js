@@ -1,10 +1,26 @@
 import { getReceiptSettings } from '../../receiptSettings'
 import { buildExtractionPrompt, extractJsonItems } from '../extractionPrompt'
+import { mediaKindFor, base64ToText } from '../mediaKind'
 
 const DEFAULT_MODEL = 'claude-sonnet-5'
 const ANTHROPIC_VERSION = '2023-06-01'
 
+// Claude attaches an image or a PDF the same way — a content block ahead
+// of the prompt text, source.media_type carrying the actual file type.
+// Plain text (or an HTML export) has no such attachment block of its own,
+// so it's inlined directly into the prompt as prose instead.
+function buildAttachmentBlock(imageBase64, mediaType, kind) {
+  if (kind === 'text') {
+    return { type: 'text', text: `Receipt text:\n\n${base64ToText(imageBase64)}` }
+  }
+  return {
+    type: kind === 'document' ? 'document' : 'image',
+    source: { type: 'base64', media_type: mediaType, data: imageBase64 },
+  }
+}
+
 async function callClaude(imageBase64, mediaType, apiKey, model, categoryNames) {
+  const kind = mediaKindFor(mediaType)
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -25,8 +41,8 @@ async function callClaude(imageBase64, mediaType, apiKey, model, categoryNames) 
         {
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
-            { type: 'text', text: buildExtractionPrompt(categoryNames) },
+            buildAttachmentBlock(imageBase64, mediaType, kind),
+            { type: 'text', text: buildExtractionPrompt(categoryNames, kind) },
           ],
         },
       ],

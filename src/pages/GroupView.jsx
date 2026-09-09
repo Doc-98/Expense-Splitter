@@ -21,6 +21,7 @@ import { processDueRecurringBills } from '../lib/recurringBills'
 import { prefetchGroupSettings } from '../lib/prefetchGroupSettings'
 import { groupItemsByDate } from '../lib/dateGroups'
 import { getGroupViewPreferences } from '../lib/groupViewPreferences'
+import { groupFilterStateCache } from '../lib/groupFilterState'
 import { buildGroupCsvRows, toCsv, downloadCsv } from '../lib/csv'
 import SettlementSummary from '../components/SettlementSummary'
 import ShareButton from '../components/ShareButton'
@@ -38,7 +39,13 @@ export default function GroupView() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { format } = useCurrency()
-  const { showQuickStats, showLentBorrowedStatus } = getGroupViewPreferences()
+  const { showQuickStats, showLentBorrowedStatus, stickyFilters } = getGroupViewPreferences()
+  // Only actually consulted when stickyFilters is on (see the state
+  // declarations below and the write-back effect near the other filter
+  // effects) — groupFilterStateCache.js has the full reasoning for why
+  // this is deliberately in-memory only, not mirrored to sessionStorage
+  // like most of this app's other caches.
+  const cachedFilters = stickyFilters ? groupFilterStateCache.get(groupId) : undefined
 
   const [group, setGroup] = useState(null)
   const [allMembers, setAllMembers] = useState([])
@@ -96,7 +103,12 @@ export default function GroupView() {
   // for you, independent of the group's running balance.
   const [billPersonalTotals, setBillPersonalTotals] = useState({})
   const [categories, setCategories] = useState([])
-  const [searchQuery, setSearchQuery] = useState('')
+  // Every piece of filter-related state below seeds from cachedFilters
+  // when stickyFilters is on and this group has a cached entry (a return
+  // trip from a bill, most commonly) — otherwise the same plain defaults
+  // as before this preference existed. See the write-back effect further
+  // down for the other half of this.
+  const [searchQuery, setSearchQuery] = useState(cachedFilters?.searchQuery ?? '')
   // Collapsed by default — a search bar plus a filters panel is a lot of
   // screen real estate for something you might not touch for a while if
   // you're just adding bills and settling up, not digging through old
@@ -104,7 +116,7 @@ export default function GroupView() {
   // section itself carries its own ↑ to retract (see the search section's
   // JSX below), and "/" opens it too (see the keydown effect below),
   // matching whichever way it was closed.
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(cachedFilters?.searchOpen ?? false)
   // Same Escape-to-close convention as the filters panel just below — an
   // inline panel toggled by its own button, same shape as filtersOpen, so
   // it gets the same treatment.
@@ -117,19 +129,23 @@ export default function GroupView() {
   // Focuses the search box the moment it actually mounts — searchOpen and
   // the ref becoming usable happen a render apart, so the keydown handler
   // below can't just call .focus() straight after setSearchOpen(true) and
-  // expect the DOM node to already exist yet.
+  // expect the DOM node to already exist yet. Also fires on a sticky-
+  // filters remount that restores an already-open search box — harmless,
+  // just re-focuses it same as opening it fresh would.
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus()
   }, [searchOpen])
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(cachedFilters?.filtersOpen ?? false)
   useEscapeKey(() => setFiltersOpen(false), filtersOpen)
-  const [selectedTagIds, setSelectedTagIds] = useState(new Set())
-  const [tagMatchMode, setTagMatchMode] = useState('any')
+  const [selectedTagIds, setSelectedTagIds] = useState(cachedFilters?.selectedTagIds ?? new Set())
+  const [tagMatchMode, setTagMatchMode] = useState(cachedFilters?.tagMatchMode ?? 'any')
   // null until initialized from real data (see the effect below) — the
   // slider has nothing to show until there's at least one bill to derive
   // bounds from. Once set, a new pricier bill coming in later doesn't
-  // silently widen a range someone already narrowed on purpose.
-  const [priceRange, setPriceRange] = useState(null)
+  // silently widen a range someone already narrowed on purpose. A
+  // restored non-null value from cachedFilters skips that initialization
+  // the same way an already-set one does — see that effect's own guard.
+  const [priceRange, setPriceRange] = useState(cachedFilters?.priceRange ?? null)
 
   const priceBounds =
     bills && bills.length > 0 ? { min: 0, max: Math.max(1, Math.ceil(Math.max(...bills.map(billTotal)))) } : null
@@ -382,6 +398,25 @@ export default function GroupView() {
   useEffect(() => {
     setBillsPage(0)
   }, [searchQuery, selectedTagIds, tagMatchMode, priceRange])
+
+  // The write half of the Sticky filters preference (see cachedFilters
+  // above) — keeps groupFilterStateCache current with exactly what's on
+  // screen so a later remount of this same group (opening a bill, then
+  // coming back) can restore it. A no-op whenever the preference is off,
+  // same as every write below it would otherwise do nothing useful with.
+  // billsPage deliberately isn't part of this — only the actual filter
+  // criteria are "sticky," not which page of results you'd scrolled to.
+  useEffect(() => {
+    if (!stickyFilters) return
+    groupFilterStateCache.set(groupId, {
+      searchQuery,
+      searchOpen,
+      filtersOpen,
+      selectedTagIds,
+      tagMatchMode,
+      priceRange,
+    })
+  }, [stickyFilters, groupId, searchQuery, searchOpen, filtersOpen, selectedTagIds, tagMatchMode, priceRange])
 
   // Initializes the price slider from real data exactly once bills first
   // load — see the priceRange state comment above for why a later reload

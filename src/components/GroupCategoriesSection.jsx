@@ -1,9 +1,49 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchCategories, addCategory, renameCategory, deleteCategory, updateCategoryColor, CATEGORY_COLORS } from '../lib/categories'
 import { groupCategoriesCache } from '../lib/groupCategoriesCache'
+import { useClickOutside } from '../lib/useClickOutside'
 import ColorSwatchPicker from './ColorSwatchPicker'
 import CategoryColorButton from './CategoryColorButton'
+import { ArrowRightIcon } from './icons'
+
+// The "⋮" per-row menu — same shape as GroupSubscriptionsSection.jsx's own
+// TemplateMenu (Rename/Delete instead of Edit/Pause/Delete). Kept local to
+// this file rather than its own component, same reasoning as that one:
+// only ever used here.
+function CategoryMenu({ category, onRename, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+  useClickOutside(wrapRef, () => setOpen(false), open)
+
+  function run(action) {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div className="row-menu-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="row-menu-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={`Actions for ${category.name}`}
+      >
+        ⋮
+      </button>
+      {open && (
+        <div className="row-menu-popover">
+          <button type="button" className="dropdown-item" onClick={() => run(onRename)}>
+            Rename
+          </button>
+          <button type="button" className="dropdown-item dropdown-item-warn" onClick={() => run(onDelete)}>
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function GroupCategoriesSection() {
   const { groupId } = useParams()
@@ -122,32 +162,39 @@ export default function GroupCategoriesSection() {
                   <CategoryColorButton color={cat.color} onChangeColor={(color) => handleCategoryColorChange(cat.id, color)} />
                   {cat.name}
                 </span>
-                <span className="member-list-actions">
-                  <button
-                    type="button"
-                    className="btn-link"
-                    onClick={() => {
-                      setEditingCategoryId(cat.id)
-                      setEditingCategoryName(cat.name)
-                    }}
-                  >
-                    Rename
-                  </button>
-                  <button type="button" className="btn-link dropdown-item-warn" onClick={() => handleDeleteCategory(cat)}>
-                    Delete
-                  </button>
-                </span>
+                <CategoryMenu
+                  category={cat}
+                  onRename={() => {
+                    setEditingCategoryId(cat.id)
+                    setEditingCategoryName(cat.name)
+                  }}
+                  onDelete={() => handleDeleteCategory(cat)}
+                />
               </>
             )}
           </li>
         ))}
       </ul>
-      <form onSubmit={submitAddCategory} className="inline-form category-add-form">
-        <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category" />
+      <h2 className="settings-section-title">New category</h2>
+      {/* Same input-with-submit pattern as Create group/Add bill/Group
+          name — the color picker is a second, non-blocking field (it
+          always already holds a value, defaulting to the first preset),
+          so unlike "Add subscription" this still has exactly one field
+          that gates submission, and stays a single arrow-in-the-field
+          rather than a separate labeled pill. */}
+      <form onSubmit={submitAddCategory} className="stacked-form">
+        <div className="input-with-submit">
+          <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category" />
+          <button
+            type="submit"
+            className="input-submit-btn"
+            disabled={!newCategoryName.trim()}
+            aria-label="Add category"
+          >
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
         <ColorSwatchPicker value={newCategoryColor} onChange={setNewCategoryColor} />
-        <button type="submit" className="btn-primary">
-          Add category
-        </button>
       </form>
 
       {error && <p className="status-error">{error}</p>}

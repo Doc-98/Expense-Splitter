@@ -434,7 +434,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .input-submit-btn:disabled { pointer-events: none; }
 .input-submit-btn:active:not(:disabled) { transform: translateY(-50%) scale(0.9); }
 @media (prefers-reduced-motion: reduce) {
-  .input-submit-btn, .recurring-submit-btn { transition: none; }
+  .input-submit-btn, .form-submit-btn { transition: none; }
 }
 
 /* ---------- Auth screen ---------- */
@@ -1004,8 +1004,10 @@ input.item-editable-input, textarea.item-editable-input {
 .add-item-form input:first-child { flex: 2; }
 .add-item-form input { flex: 1; min-width: 0; }
 
-.scan-row { display: flex; justify-content: center; margin-top: var(--space-sm); }
-.scan-row .btn-secondary { width: 100%; }
+.scan-row { display: flex; flex-direction: column; margin-top: var(--space-sm); }
+.scan-buttons { display: flex; gap: 8px; }
+.scan-buttons .btn-secondary { flex: 1; }
+.scan-status { text-align: center; margin: 0; }
 
 .sample-link { display: block; text-align: center; margin: var(--space-xs) auto 0; }
 .scan-strategy-note { text-align: center; margin-top: 6px; }
@@ -1722,7 +1724,6 @@ input.item-editable-input, textarea.item-editable-input {
   flex-shrink: 0;
 }
 .category-label { display: flex; align-items: center; }
-.category-add-form { flex-wrap: wrap; }
 .color-swatch-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .color-swatch {
   width: 22px;
@@ -1764,28 +1765,32 @@ input.item-editable-input, textarea.item-editable-input {
   z-index: 10;
 }
 
-/* ---------- Recurring bills ---------- */
-.recurring-form { display: flex; flex-direction: column; gap: var(--space-sm); align-items: stretch; }
-.recurring-form-row { display: flex; gap: var(--space-md); }
-.recurring-form-row label {
+/* ---------- Stacked multi-field form (fading submit) ----------
+   For a form whose submit control can't live inside one field the way
+   Create group/Add bill's own input-with-submit does — several fields
+   gate it at once here — so it stays a normal labeled button at the end
+   of the form instead, genuinely hidden (not just dimmed) until valid.
+   Each field/row gets its own line via `gap`, full width via
+   `align-items: stretch`. Originally built for "Add recurring bill";
+   Group Settings' Categories tab reuses the same shape for its own
+   multi-field "New category" form. */
+.stacked-form { display: flex; flex-direction: column; gap: var(--space-sm); align-items: stretch; }
+.stacked-form-row { display: flex; gap: var(--space-md); }
+.stacked-form-row label {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
   flex: 1;
 }
-.recurring-form-row select,
-.recurring-form-row input[type='date'] { font-size: 14px; }
-.recurring-form-actions { display: flex; align-items: center; gap: var(--space-md); }
-/* Same "genuinely disabled until valid" rule as Create group/Add bill's
-   own input-with-submit (see that comment in this file), adapted for a
-   button that can't live inside a single field — several fields gate it
-   at once, so it stays a normal labeled button at the end of the form
-   (its usual spot) rather than an icon docked in one of them, just fading
-   out instead of only dimming while canSubmit is false. */
-.recurring-submit-btn { transition: opacity 0.22s ease, transform 0.22s ease; }
-.btn-primary.recurring-submit-btn:disabled { opacity: 0; transform: translateY(4px); pointer-events: none; }
-.recurring-submit-hint { font-size: 12.5px; color: var(--ink-soft); }
+.stacked-form-row select,
+.stacked-form-row input[type='date'] { font-size: 14px; }
+.stacked-form-actions { display: flex; align-items: center; gap: var(--space-md); }
+.form-submit-btn { transition: opacity 0.22s ease, transform 0.22s ease; }
+.btn-primary.form-submit-btn:disabled { opacity: 0; transform: translateY(4px); pointer-events: none; }
+.form-submit-hint { font-size: 12.5px; color: var(--ink-soft); }
+
+/* ---------- Recurring bills ---------- */
 /* The row currently populating the form below — an accent outline, same
    idea as GroupSettings.jsx's own "this row is mid-action" treatments,
    so it's obvious at a glance which template "Edit recurring bill" is

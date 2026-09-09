@@ -1,9 +1,22 @@
 import { getReceiptSettings } from '../../receiptSettings'
 import { buildExtractionPrompt, extractJsonItems } from '../extractionPrompt'
+import { mediaKindFor, base64ToText } from '../mediaKind'
 
 const DEFAULT_MODEL = 'gemini-2.5-flash'
 
+// Gemini attaches an image or a PDF the same way (inline_data carrying the
+// file's own mime type). Plain text (or an HTML export) has no such part
+// of its own, so it's inlined directly into the prompt as prose instead —
+// same reasoning as claudeStrategy.js's own buildAttachmentBlock.
+function buildAttachmentPart(imageBase64, mediaType, kind) {
+  if (kind === 'text') {
+    return { text: `Receipt text:\n\n${base64ToText(imageBase64)}` }
+  }
+  return { inline_data: { mime_type: mediaType, data: imageBase64 } }
+}
+
 async function callGemini(imageBase64, mediaType, apiKey, model, categoryNames) {
+  const kind = mediaKindFor(mediaType)
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
@@ -16,8 +29,8 @@ async function callGemini(imageBase64, mediaType, apiKey, model, categoryNames) 
         contents: [
           {
             parts: [
-              { inline_data: { mime_type: mediaType, data: imageBase64 } },
-              { text: buildExtractionPrompt(categoryNames) },
+              buildAttachmentPart(imageBase64, mediaType, kind),
+              { text: buildExtractionPrompt(categoryNames, kind) },
             ],
           },
         ],
