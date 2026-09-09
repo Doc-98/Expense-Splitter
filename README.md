@@ -88,15 +88,17 @@ the (tiny) hosting bill. Setup takes about 20 minutes.
    `items`, `item_shares`, `bill_payers`, `payments`, `group_members` — this
    is what makes edits show up live on every phone without refreshing.
 4. **Authentication → Sign In / Providers** → confirm **Email** is on
-   (default). For magic links and password-reset links to redirect to your
-   deployed app instead of `localhost`, set **Authentication → URL
-   Configuration → Site URL** once you've deployed (step 3 below), and add
+   (default).
+5. Once you've deployed (**"3. Run it / deploy it"** below): set
+   **Authentication → URL Configuration → Site URL** to your deployed app's
+   URL, and add
    `your-deployed-url/reset-password` under **Redirect URLs** on the same
-   page — Supabase rejects a redirect target that isn't on this allowlist,
-   which otherwise silently breaks the "forgot password" flow specifically
-   (magic links happen to redirect to the Site URL's bare root, which is
-   already allowed by default; password resets redirect to `/reset-password`
-   on top of it, which isn't covered by that same default).
+   page. Both matter — Supabase rejects a redirect target that isn't on
+   this allowlist. Magic links redirect to the Site URL's bare root
+   (already allowed by default), but password resets redirect to
+   `/reset-password` on top of it, which isn't — skip this and "forgot
+   password" specifically breaks silently, even though magic-link sign-in
+   works fine.
 
 ### 2. Get your API credentials
 
@@ -209,6 +211,19 @@ Every strategy runs entirely in the browser — nothing server-side to deploy.
 Chosen per-person in **Settings → Scan settings**, stored only on that
 device.
 
+"Scan a receipt" is two entry points, not one: **Take photo** goes straight
+to the camera (`accept="image/*" capture="environment"`); **Choose file**
+opens the normal file picker with a wider `accept` that also admits a PDF,
+or a plain-text/HTML export — two separate `<input>`s rather than one wider
+`accept` list, since iOS drops its own Take Photo/Photo Library shortcuts
+the moment `accept` includes a non-image type. `src/lib/receipt-parsing/
+mediaKind.js` classifies whichever file comes back as image/document/text;
+Claude and Gemini attach a PDF as a document block the same way they attach
+an image, and inline plain text/HTML straight into the prompt. Free OCR and
+Ollama are both fundamentally image-only (pixels, or a vision model's own
+`images` array) and fail fast with an actionable message on anything else,
+rather than mishandling it.
+
 | Strategy | Setup | Notes |
 |---|---|---|
 | **Free OCR** (default) | None | Runs on-device (Tesseract.js). Best on a clear, well-lit, two-column receipt (item left, price right). |
@@ -264,6 +279,23 @@ corrected total (say, a receipt line manually fixed from $1.29 to $1.50 a
 unit) never leaves a stale unit price disagreeing with it in a CSV or recap
 export.
 
+The price fields (adding an item, or editing one in place) accept a small
+arithmetic expression, not just a plain number — `2,30-1,25` saves as `1,05`.
+`src/lib/parseNumber.js`'s `parseAmount()` is a hand-rolled recursive-descent
+evaluator (`+ - * /`, unary minus, parentheses; deliberately never
+`eval()`/`Function()`), tried only when the plain-number parse fails, and
+rounds an *evaluated* result to the cent to correct binary floating-point
+drift (`0.1 + 0.2` landing on `0.30000000000000004` otherwise). Kept separate
+from `parseNumber()` itself, which also parses text nobody actually typed (an
+OCR'd receipt line, an imported bank statement row) — there, a stray "-" from
+a misread character silently evaluating as subtraction would turn a bad read
+into a wrong number instead of the `NaN` that correctly flags it today. These
+fields' `pattern` attribute is a permissive character allowlist for the same
+reason iOS's decimal keypad gets a minus key at all: any `pattern` containing
+"-" unlocks it, and — since fixing this — one wide enough to admit everything
+`parseAmount` accepts, not a stricter one that would just silently block
+submission of anything it doesn't recognize (comma-decimal prices included).
+
 ## Backdating (or postdating) a bill
 
 There's no separate date column — `created_at` already doubles as a bill's
@@ -312,15 +344,16 @@ Groups section's "⋮ → Leave group" need to do the exact same thing,
 snapshot included (see "How the data model works" below), not two copies
 that could quietly drift apart.
 
-Three different confirm patterns, by how much is at stake: `ConfirmSheet.jsx`
-(a bottom sheet) for a plain yes/no worth a beat of "are you sure" but
-nothing more — Sign Out, Leave group. `TypedConfirmSheet.jsx` (same sheet
-chrome, plus a "type the exact word to confirm" gate) for the genuinely
-hard-to-reverse ones, where a click alone is too easy to do by habit —
-Delete all bills, Delete group. And the app's existing centered
-`.modal-panel` dialogs stay as they are for anything content-heavy rather
-than a confirmation as such (the multi-payer split, a bill's own delete-
-selected count).
+Three different confirm patterns, by how much is at stake:
+
+- **`ConfirmSheet.jsx`** (a bottom sheet) — a plain yes/no worth a beat of
+  "are you sure" but nothing more: Sign Out, Leave group.
+- **`TypedConfirmSheet.jsx`** (same sheet chrome, plus a "type the exact
+  word to confirm" gate) — the genuinely hard-to-reverse ones, where a
+  click alone is too easy to do by habit: Delete all bills, Delete group.
+- The app's existing centered **`.modal-panel`** dialogs stay as they are
+  for anything content-heavy rather than a confirmation as such (the
+  multi-payer split, a bill's own delete-selected count).
 
 ## Group settings page
 
@@ -365,26 +398,29 @@ ever surfaced to change that (see `is_personal` on the `groups` table), so
 neither tab is offered there at all rather than existing and showing
 nothing.
 
-Danger Zone has three actions, not all shown to everyone. **Leave group**
-is offered to any real member of a non-personal group — confirmed via
-`ConfirmSheet.jsx`, the same plain bottom-sheet yes/no Sign Out uses (see
-"Settings page" above), since leaving is worth a beat of "are you sure" but
-nothing heavier. **Delete all bills** and **Delete group** are admin-only,
-and confirmed via `TypedConfirmSheet.jsx` instead — same sheet chrome, plus
-a "type the group's exact name to confirm" gate (case-sensitive, no
-trimming), since either one erases something in a single click that can't
-be undone. This replaces what used to be `TypedConfirmModal.jsx` (a
-centered dialog) — deleted outright once nothing referenced it anymore,
-rather than kept around as a second, unused pattern. **Delete group** is
-new: `delete_group()` (schema.sql; standalone migration
-`admin_delete_group.sql`) is the actual nuclear option — not just a
-group's bills, the group itself, cascading to every member, guest,
-category, subscription, bill, payment, and departed member's own frozen
-snapshot for it. Same admin gate as `delete_all_group_bills()`, plus one
-more: a personal space can never be deleted this way (it isn't something
-whose lifecycle is managed — it's recreated automatically the next time its
-owner opens the Personal tab), enforced server-side too, not just by the
-client never offering the button.
+Danger Zone has three actions, not all shown to everyone:
+
+- **Leave group** — offered to any real member of a non-personal group,
+  confirmed via `ConfirmSheet.jsx` (the same plain bottom-sheet yes/no Sign
+  Out uses), since leaving is worth a beat of "are you sure" but nothing
+  heavier.
+- **Delete all bills** and **Delete group** — admin-only, confirmed via
+  `TypedConfirmSheet.jsx` instead (same sheet chrome, plus a "type the
+  group's exact name to confirm" gate, case-sensitive, no trimming), since
+  either erases something in a single click that can't be undone. Replaces
+  what used to be `TypedConfirmModal.jsx` (a centered dialog) — deleted
+  outright once nothing referenced it anymore, rather than kept around as a
+  second, unused pattern.
+
+**Delete group** is new: `delete_group()` (schema.sql; standalone migration
+`admin_delete_group.sql`) is the actual nuclear option — not just a group's
+bills, the group itself, cascading to every member, guest, category,
+subscription, bill, payment, and departed member's own frozen snapshot for
+it. Same admin gate as `delete_all_group_bills()`, plus one more: a personal
+space can never be deleted this way (it's recreated automatically the next
+time its owner opens the Personal tab, not something whose lifecycle is
+managed), enforced server-side too, not just by the client never offering
+the button.
 
 ## Updates section, and the service worker
 
@@ -428,12 +464,15 @@ for the same underlying numbers.
 ## Categories
 
 Every group starts with seven seeded categories (Groceries, Eating out,
-Household, Bills & utilities, Transport, Health, Other) — add, rename, or
-delete freely from Group Settings → **Categories**. A bill's category is
-the common case (one tap covers the whole receipt); an individual item can
-override it when it genuinely belongs somewhere else. Deleting a category
-in use doesn't block anything — every bill/item that referenced it just
-falls back to uncategorized.
+Household, Bills & utilities, Transport, Health, Other). Group Settings →
+**Categories** adds new ones via the same input-with-submit pattern as
+Create group/Add bill (an arrow fades in inside the field once it's not
+empty); each existing one's "⋮" menu covers **Rename**/**Delete**. Deleting
+a category in use doesn't block anything — every bill/item that referenced
+it just falls back to uncategorized.
+
+A bill's category is the common case (one tap covers the whole receipt); an
+individual item can override it when it genuinely belongs somewhere else.
 
 Each category has a color, shown as a small dot wherever the category
 appears — a 10-color preset plus the browser's own picker for anything else,
@@ -529,10 +568,13 @@ into any field (search, an amount, a filter) is never intercepted.
 | Stats pages | `←` / `→` | Previous / next period |
 | Anywhere with a popover open | `Esc` | Close it (menus, search, filters) |
 
-The bill list's Pagination bar also sticks to the bottom of the viewport
-rather than sitting wherever the last row happens to land, so it's always
-reachable without a scroll — applies everywhere `Pagination` is used, not
-just the bill list.
+The bill list's Pagination bar also docks near the bottom of the viewport
+once scrolling would otherwise carry it past that point (`position:
+sticky`, not `fixed` — a permanently-floating pill was tried and reverted
+for staying visible well past where it should settle into the page's own
+flow on a short page). Switching pages via the pill itself re-scrolls to
+the new page's own bottom rather than leaving it at a stale scroll position
+— applies everywhere `Pagination` is used, not just the bill list.
 
 ## Subscriptions
 
@@ -552,18 +594,21 @@ bill afterward, editable (including switching it to multiple payers) like
 any other.
 
 Each subscription row has a "⋮" menu — **Edit**, **Pause**/**Resume**,
-**Delete**. **Edit** re-populates the same form used to create one
-(scrolled to and outlined so it's clear which one it's now pointed at) and
-re-submits through `updateRecurringBill()` instead of `addRecurringBill()`;
-it's deliberately narrower than creation, touching only what a generated
-bill *contains* (title, amount, category, who paid, who splits it), never
-**frequency** or **start date** — those anchor `next_due_date`/
-`day_of_month`, already stored and potentially already advanced past the
-original start date, so editing them after the fact risks silently
-corrupting future occurrences. Delete and recreate covers "I want this on a
-different schedule" instead. The "Add"/"Save changes" button stays disabled
-until title and amount are genuinely valid (and, in a real group, at least
-one person is still selected to split with).
+**Delete**:
+
+- **Edit** re-populates the same form used to create one (scrolled to and
+  outlined so it's clear which one it's now pointed at) and re-submits
+  through `updateRecurringBill()` instead of `addRecurringBill()`. It's
+  deliberately narrower than creation — only what a generated bill
+  *contains* (title, amount, category, who paid, who splits it), never
+  **frequency** or **start date**, since those anchor `next_due_date`/
+  `day_of_month`, already stored and potentially already advanced past the
+  original start date; editing them after the fact risks silently
+  corrupting future occurrences. Delete and recreate covers "I want this on
+  a different schedule" instead.
+- The "Add"/"Save changes" button stays disabled until title and amount are
+  genuinely valid (and, in a real group, at least one person is still
+  selected to split with).
 
 There's no scheduled job anywhere in this app: `processDueRecurringBills()`
 runs whenever anyone opens the group and creates whatever's due — every
@@ -607,6 +652,16 @@ round-trip:
   cheapest/most expensive bill (`src/components/RangeSlider.jsx`), or type an
   exact value into either number below it.
 
+Opening a bill and coming back normally resets all of this — plain
+component state on `GroupView.jsx`, which unmounts on that round trip since
+bills live on their own route. **Sticky filters** (Settings → Groups →
+Display, off by default) opts into keeping it instead:
+`src/lib/groupFilterState.js` is a small in-memory-only cache (deliberately
+no `sessionStorage` mirror, unlike most of this app's other caches — a real
+page refresh should still clear it) that `GroupView.jsx` seeds its filter
+state from on mount and writes back to on every change, only while the
+preference is on.
+
 ## Bill actions: deleting and sharing
 
 Every bill has a **⋮** menu (`src/components/BillActionsMenu.jsx`) with
@@ -644,123 +699,111 @@ into "Your Stats" automatically, same as any other group.
 ### Importing a bank statement
 
 `/groups/:groupId/import-bank-statement` (linked from the Personal space's
-own Group Settings → **Data** — not available for a real group yet) turns
-a bank or credit-card statement into bills. Three ways in:
+own Group Settings → **Data** — not available for a real group yet) turns a
+bank or credit-card statement into bills.
 
-- **CSV or Excel export**, if your bank offers one — parsed locally first,
-  no AI required. Both formats share one column-detection-plus-parsing pass
-  (`src/lib/bankStatementRows.js`) that matches by common column aliases
-  (Date/Payee/Amount, or separate Debit/Credit columns) rather than one
-  fixed shape, and handles currency symbols, thousands separators (either
-  "1,234.56" or "1.234,56"), and parenthesized negatives when reading an
-  amount. `src/lib/bankStatementCsv.js` and `src/lib/bankStatementXlsx.js`
-  are thin per-format wrappers around it — Excel parsing is via
-  `read-excel-file`, loaded lazily so it doesn't add to every other page's
-  bundle. Excel is here specifically for mobile: redacting a PDF or
-  exporting-to-CSV is realistically a desktop-only step, and a mobile user
-  whose bank only offers PDF/Excel downloads would otherwise be stuck.
-  **If Claude, Gemini, or Ollama is set up in Scan settings**, the
-  heuristic's column match also gets a second opinion from that same AI —
-  `src/lib/bankStatementColumns/` sends it the header row plus a handful of
-  sample rows (not the whole file) and asks it to independently point at
-  which column is which, to catch a header the alias list doesn't
-  recognize (a different language, an unusual bank's own wording). The
-  heuristic's own result is trusted by default; the AI's only replaces it
-  when the two actually disagree on a workable mapping, and doing so always
-  surfaces a review-screen notice asking you to double-check dates and
-  amounts, per this app's usual "flag, never apply silently" rule for any
-  AI suggestion (see `src/lib/bankStatementTabular.js`, the orchestrator
-  both formats go through). Unlike the PDF path, which needs AI by design,
-  the heuristic here already works standalone — so this one check has its
-  own opt-out checkbox on the landing screen (`bankStatementAiColumnCheck`
-  in `receiptSettings.js`, on by default), independent of whichever AI
-  service is configured for everything else. Category suggestions aren't
-  gated by it — they're already opt-in by nature of needing an AI service
-  configured at all, same as on a PDF import.
-- **PDF statement** — read by whichever AI service you've set up in Scan
-  settings (Claude or Gemini specifically; Ollama's local models don't
-  reliably take a multi-page PDF document the way those two hosted APIs do,
-  so there's no local fallback here the way receipt scanning has one).
-  **Strip anything sensitive beyond the transactions themselves — account
-  number, name, address — before uploading**, since the file is sent to
-  that provider to be read.
-- **Bring your own AI chat**, for anyone without a Claude or Gemini API key
-  set up here at all — a Claude Pro subscriber with no API tokens, say. A
-  collapsible section on the landing screen (reusing the same
-  `.collapsible-section` styling as Settings' own collapsed panels) holds a
-  ready-made prompt (`byoAiPrompt` in `ImportBankStatement.jsx`, built from
-  the group's own real category names) with a one-click copy button — paste
-  it into whichever AI chat app you already use, attach your own redacted
-  statement there, and paste the CSV it hands back into the textarea below.
-  The prompt asks for the exact same `Date,Description,Amount,Category`
-  shape the rest of this pipeline already understands, so a pasted CSV goes
-  through the identical `parseBankStatementCsv` → column-detection →
-  review flow as an uploaded one — indistinguishable from here on, not a
-  separate code path. It's also how a category guess round-trips straight
-  into `categoryId` without a second, separate classification pass:
-  `bankStatementRows.js` recognizes a `Category`/`Categoria` column
-  (`CATEGORY_ALIASES`) and sets each transaction's `categoryHint`, which
-  `initialReviewEntry` resolves against the group's real categories by
-  name. A hint that doesn't match one (a renamed/deleted category since the
-  prompt was copied, or the model missing a fit) just falls back to blank,
-  same as an ordinary uncategorized transaction. Same redaction warning as
-  the PDF path applies here too, since the statement is being shown to a
-  third-party AI chat app outside this app's own control either way.
+#### Getting the data in
 
-**A real bank's own category column is trusted, not re-guessed** — plenty of
-CSV/Excel exports carry one already, and the bank presumably knows what it's
-talking about better than a title-only guess would. Its own category names
-essentially never match this app's though (a different bank's own wording,
-often a different language from the app's category names entirely), so a
-**"Match bank categories" step** runs once, right after parsing and before
-the one-at-a-time review below, whenever the statement has at least one
-category name (`categoryHint`, same field the "bring your own AI chat" path
-above sets) that doesn't already match one of this group's own category
-names and hasn't been matched before. Skipped entirely for a file with no
-category column, or once every name it has has already been matched.
+- **CSV or Excel export**, if your bank offers one — parsed locally, no AI
+  required. `src/lib/bankStatementRows.js` does the actual
+  column-detection-plus-parsing for both formats: common column aliases
+  (Date/Payee/Amount, or separate Debit/Credit), currency symbols, either
+  thousands-separator convention ("1,234.56" or "1.234,56"), and
+  parenthesized negatives. `bankStatementCsv.js`/`bankStatementXlsx.js` are
+  thin per-format wrappers around it — Excel via a lazily-loaded
+  `read-excel-file`, so it doesn't cost every other page's bundle size.
+  Excel exists specifically for mobile: redacting a PDF or exporting to CSV
+  is realistically a desktop-only step, and a bank that only offers
+  PDF/Excel downloads would otherwise leave a mobile user stuck.
+
+  If Claude, Gemini, or Ollama is set up in Scan settings, the heuristic
+  column match also gets a second opinion from that AI (`src/lib/
+  bankStatementColumns/`, sent the header row plus a few sample rows, not
+  the whole file) — useful for a header the alias list doesn't recognize
+  (a different language, an unusual bank's own wording). The heuristic's
+  result is trusted by default; the AI's only replaces it when the two
+  genuinely disagree, and always with a review-screen notice to
+  double-check dates and amounts — this app's usual "flag, never apply
+  silently" rule for an AI suggestion (see `bankStatementTabular.js`, the
+  orchestrator both formats go through). Since the heuristic already works
+  standalone here (unlike the PDF path below), this one check has its own
+  opt-out (`bankStatementAiColumnCheck` in `receiptSettings.js`, on by
+  default), independent of whichever AI service is configured for
+  everything else.
+
+- **PDF statement** — read by whichever AI service is set up in Scan
+  settings (Claude or Gemini only; Ollama's local models don't reliably
+  take a multi-page PDF the way those two hosted APIs do, so there's no
+  local fallback here the way receipt scanning has one). Strip anything
+  sensitive beyond the transactions themselves — account number, name,
+  address — before uploading, since the file is sent to that provider.
+
+- **Bring your own AI chat**, for anyone without a Claude/Gemini API key
+  set up here — a Claude Pro subscriber with no API tokens, say. A
+  collapsible section on the landing screen holds a ready-made prompt
+  (`byoAiPrompt` in `ImportBankStatement.jsx`, built from the group's own
+  real category names) with a one-click copy button — paste it into
+  whichever AI chat app you already use, attach your own redacted
+  statement, paste back the CSV it hands you. That CSV asks for the same
+  `Date,Description,Amount,Category` shape the rest of this pipeline
+  already understands, so it goes through the identical parse →
+  column-detection → review flow as an upload, not a separate code path.
+  The `Category` column (recognized via `CATEGORY_ALIASES`) is also how a
+  guess round-trips straight into `categoryId`, resolved by name against
+  the group's real categories (`initialReviewEntry`) — a name that doesn't
+  match falls back to blank, same as any uncategorized transaction. Same
+  redaction warning as the PDF path applies, since a third-party chat app
+  is seeing the statement either way.
+
+#### Matching bank categories
+
+A real bank's own category column is trusted, not re-guessed — but its
+names essentially never match this app's own (different wording, often a
+different language), so a one-time **"Match bank categories"** step runs
+right after parsing, whenever the statement has at least one category name
+(`categoryHint` — the same field the AI-chat path above sets) that doesn't
+already match a group category and hasn't been matched before. Skipped for
+a file with no category column, or once every name it has is already
+matched.
+
 `src/lib/bankCategoryMappings.js` remembers each choice per group,
-localStorage-only (a device's own view of how a bank's wording lines up
-with a group's categories, not something worth a database table or syncing
-across devices) — so this only ever asks about a given bank category name
-once per group, not once per statement. A transaction whose category
-resolves this way — exact name match, a previous mapping, or one just
-chosen — is never second-guessed by this app's own AI suggestion pass
-either (same `!entry.categoryId` skip that already protects an
-already-reviewed entry from a stale late suggestion, see
-`runCategorySuggestions` in `ImportBankStatement.jsx`); choosing "Leave
-uncategorized" for a bank category is remembered too, so that answer sticks
-without blocking the AI pass from still taking its own guess at those.
+localStorage-only (a device's own view of how a bank's wording maps to a
+group's categories — not worth a database table or cross-device sync), so a
+given bank's categories only ever need matching once per group, not once
+per statement. A category resolved this way — exact match, a previous
+mapping, or one just chosen — is never second-guessed by the AI suggestion
+pass either (same guard that already protects an already-reviewed entry
+from a stale late suggestion; see `runCategorySuggestions` in
+`ImportBankStatement.jsx`). Choosing "Leave uncategorized" for a bank
+category is remembered too, without blocking the AI pass from still
+guessing at those.
+
+#### Reviewing, pausing, and resuming
 
 Every path lands on the same review flow: one transaction at a time, not a
-single long list of everything at once — a 200-row statement felt
-overwhelming as a flat list, and a one-at-a-time card is also what makes
-the rest of this section possible (see below). Each card shows the date,
-amount, an editable description (for when the bank's own wording isn't
-what you'd want as a bill title), a category suggestion (reusing the exact
-same AI pass `/categorize` uses — CSV and Excel get this too, whenever an
-AI service is configured, not just PDF), and a checkbox to include or skip
-it. Credits (salary, refunds, incoming transfers) never get a card at all
-— they can't be imported either way, so there's nothing to review about
-one. A progress line ("47 of 180, 46 reviewed") and a **← Back** button sit
-alongside Next/Finish — human error is expected on a long statement, so
-going back to fix an earlier card is a first-class action, not an
-afterthought.
+single long list — a 200-row statement felt overwhelming as a flat list,
+and one-at-a-time is also what makes pausing safe (below). Each card shows
+the date, amount, an editable description (for when the bank's own wording
+isn't what you'd want as a bill title), a category suggestion (the same AI
+pass `/categorize` uses — CSV/Excel get this too, not just PDF, whenever an
+AI service is configured), and a checkbox to include or skip it. Credits
+(salary, refunds, incoming transfers) never get a card — they can't be
+imported either way. A progress line ("47 of 180, 46 reviewed") and a
+**← Back** button sit alongside Next/Finish, since going back to fix an
+earlier card is expected, not an edge case.
 
-Each transaction becomes a real bill the moment you move past its card
-(Next or Back both confirm the current one first) — not all at once at the
-very end. That's what makes **pausing genuinely safe**: closing the tab
-mid-statement doesn't lose anything already confirmed, and Group
-Settings' "Import a bank statement" link turns into "Resume bank statement
-import — N of M remaining" whenever an unfinished one exists
-(`bank_import_drafts` in schema.sql holds the still-unreviewed
-transactions and each one's review state; reviewed transactions aren't
-kept there twice, since they're already real bills by that point). Only
-one import can be in progress per group at a time — starting a new one
-while another's unfinished means resuming or discarding it first, from the
-wizard's own landing screen. Going back and changing an already-committed
-transaction updates that same bill rather than creating a second one
-alongside it — see `src/lib/bankImportDrafts.js` and
-`src/pages/ImportBankStatement.jsx`'s own `confirmCurrentCard`.
+Each transaction becomes a real bill the moment you move past its card —
+not all at once at the end. That's what makes pausing genuinely safe:
+closing the tab mid-statement loses nothing already confirmed, and Group
+Settings' own import link turns into "Resume bank statement import — N of M
+remaining" whenever one's unfinished (`bank_import_drafts` in schema.sql
+holds the still-unreviewed transactions; a reviewed one isn't kept there
+twice, since it's already a real bill by then). Only one import can be in
+progress per group — starting another means resuming or discarding the
+first from the wizard's own landing screen. Going back and changing an
+already-committed transaction updates that same bill rather than creating a
+second one alongside it (`src/lib/bankImportDrafts.js`,
+`ImportBankStatement.jsx`'s own `confirmCurrentCard`).
 
 <details>
 <summary>Duplicate detection</summary>
@@ -794,10 +837,21 @@ Setting up a Subscription by hand, from Group Settings, is unaffected.)
 
 ## The in-app guide
 
-`/guide` (also reachable from Settings as "How to Use") is a
-searchable set of collapsible sections covering the whole app — worth
-keeping in sync as features land; it's one file, `src/pages/Guide.jsx`, each
-section self-contained.
+`/guide` (also reachable from Settings as "How to Use", both rendering the
+same `src/components/GuideSection.jsx`) is a searchable, topic-by-topic
+guide covering the whole app — worth keeping in sync as features land.
+Topics are grouped (Getting started, Bills & splitting, Settling up,
+Sharing & importing your data, Stats, Group management, Your account);
+browsing one group at a time uses the same `SettingsNav.jsx` rail the
+account and Group Settings pages already use on the standalone `/guide`
+page (room for a full second rail), and a horizontally scrollable row of
+chips instead when embedded in Settings (`compact` prop — a second full
+rail nested inside Settings' own measured out too cramped on a real
+phone). Typing a search query bypasses both and flattens every group's
+matching topics into one force-opened list, same as before either
+existed. Each topic is still its own self-contained `<details>` entry —
+keep new/changed ones short enough to stay skimmable; split a topic that's
+grown long into two rather than letting it become another wall of text.
 
 ## Recaps, PDFs, and CSV
 

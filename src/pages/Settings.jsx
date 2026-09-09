@@ -202,7 +202,11 @@ export default function Settings() {
           onSignOut={() => setConfirmingSignOut(true)}
         />
         <div className="settings-content">
-          <Content />
+          {/* Only GuideSection actually reads `compact` (its own second
+              rail measures out too cramped nested inside this page's — see
+              that component's own comment); every other section here just
+              silently ignores the prop. */}
+          <Content compact={activeId === 'guide'} />
         </div>
       </div>
 
