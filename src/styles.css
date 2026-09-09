@@ -501,6 +501,11 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   font-weight: 500;
 }
 .card-list-item:hover { border-color: var(--accent); }
+/* Instant feedback the moment a press starts — whether it turns into a
+   plain tap or gets held long enough to trigger useLongPress.js's own
+   select-mode gesture, so there's never a dead stretch where nothing on
+   screen has reacted yet. */
+.card-list-item:active { border-color: var(--accent); background: var(--accent-light); }
 /* The ↑/↓-selected row (src/lib/useListKeyboardNav.js, shared by
    GroupView.jsx's bill list and Groups.jsx's group list) — same accent
    used for hover/focus elsewhere in the app, just on the whole row

@@ -16,6 +16,7 @@ import { filterBills, billTotal } from '../lib/billFilters'
 import { useEscapeKey } from '../lib/useEscapeKey'
 import { isTypingTarget } from '../lib/isTypingTarget'
 import { useListKeyboardNav } from '../lib/useListKeyboardNav'
+import { useLongPress } from '../lib/useLongPress'
 import { useCurrency } from '../context/CurrencyContext'
 import { processDueRecurringBills } from '../lib/recurringBills'
 import { prefetchGroupSettings } from '../lib/prefetchGroupSettings'
@@ -389,6 +390,11 @@ export default function GroupView() {
       if (bill) navigate(`/groups/${groupId}/bills/${bill.id}`)
     },
   })
+
+  // Press-and-hold a bill row as a faster, mobile-friendly way into select
+  // mode alongside the existing "⋮ → Select" entry point — see
+  // enterSelectModeWith below, and useLongPress.js for the gesture itself.
+  const bindLongPress = useLongPress()
 
   // A fresh filter (or a changed price range) should start back on page 1
   // of its own results, not strand you on whatever page you happened to be
@@ -1092,7 +1098,11 @@ export default function GroupView() {
                           </label>
                         ) : (
                           <>
-                            <Link to={`/groups/${groupId}/bills/${bill.id}`} className="card-list-item">
+                            <Link
+                              to={`/groups/${groupId}/bills/${bill.id}`}
+                              className="card-list-item"
+                              {...bindLongPress(() => enterSelectModeWith(bill.id))}
+                            >
                               {billLabel}
                               <span className="bill-row-right">
                                 {billAmount}

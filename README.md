@@ -668,6 +668,17 @@ Every bill has a **⋮** menu (`src/components/BillActionsMenu.jsx`) with
 **Select**, **Share**, and **Delete**. With one or more bills selected, a bar
 above the list adds **Share** (one combined recap) and **Delete selected**.
 
+Press and hold a bill row for a faster way into select mode with that row
+already checked — `src/lib/useLongPress.js` is a small, reusable Pointer
+Events-based hook (covers touch/mouse/pen with one set of listeners; not
+this app's usual separate touchstart+mousedown pair, safe here specifically
+because nothing else on the row listens for those legacy events too). It
+swallows the click that still follows the eventual pointerup by calling
+`event.preventDefault()` from its own `onClick` — since `Link`'s own click
+handler only navigates `if (!event.defaultPrevented)`, that's enough to
+stop a long press from *also* navigating into the bill, no extra
+navigation-blocking logic needed on `GroupView.jsx`'s side.
+
 For wiping a group's *entire* bill history in one shot, Group Settings'
 **Danger Zone → Delete all bills** is the one bill-deleting action that's
 admin-only — every other delete path stays open to any active member. It

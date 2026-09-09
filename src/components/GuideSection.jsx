@@ -317,7 +317,7 @@ const GROUPS = [
         id: 'managing-bill-list',
         title: 'Managing your bill list',
         keywords:
-          'pagination page delete select share menu lent borrowed owe balance bulk select all danger zone',
+          'pagination page delete select share menu lent borrowed owe balance bulk select all danger zone press hold long press',
         body: (
           <>
             <p>
@@ -336,7 +336,9 @@ const GROUPS = [
             <p>
               The <MenuGlyphDemo /> on any bill opens <strong>Select</strong>, <strong>Share</strong>,
               and <strong>Delete</strong> for that one bill — the same place you'd land tapping the
-              list's own <strong>Select</strong> toggle and checking that row yourself.
+              list's own <strong>Select</strong> toggle and checking that row yourself. Press and
+              hold a bill instead for a faster shortcut straight into select mode with that row
+              already checked — a small buzz confirms it triggered.
             </p>
             <p>
               With bills selected, a bar above the list offers <strong>Share</strong> (one message;
