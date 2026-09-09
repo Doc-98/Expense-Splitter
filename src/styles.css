@@ -1004,8 +1004,10 @@ input.item-editable-input, textarea.item-editable-input {
 .add-item-form input:first-child { flex: 2; }
 .add-item-form input { flex: 1; min-width: 0; }
 
-.scan-row { display: flex; justify-content: center; margin-top: var(--space-sm); }
-.scan-row .btn-secondary { width: 100%; }
+.scan-row { display: flex; flex-direction: column; margin-top: var(--space-sm); }
+.scan-buttons { display: flex; gap: 8px; }
+.scan-buttons .btn-secondary { flex: 1; }
+.scan-status { text-align: center; margin: 0; }
 
 .sample-link { display: block; text-align: center; margin: var(--space-xs) auto 0; }
 .scan-strategy-note { text-align: center; margin-top: 6px; }

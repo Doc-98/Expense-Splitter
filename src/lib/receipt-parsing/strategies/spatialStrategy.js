@@ -1,6 +1,7 @@
 import { extractItemsFromLines } from '../lineParser'
 import { getReceiptSettings } from '../../receiptSettings'
 import { preprocessImageForOcr } from '../preprocessImage'
+import { mediaKindFor } from '../mediaKind'
 
 // Tesseract's actual nested shape is blocks[].paragraphs[].lines[].words[]
 // — there's no flat data.lines. Block-level output also has to be
@@ -72,6 +73,14 @@ export const spatialStrategy = {
   // Items come back with no `category` field at all, same as before this
   // feature existed — plain undefined, nothing for the caller to resolve.
   parse: (imageBase64, mediaType, onProgress) => {
+    // Tesseract reads pixels off a photo — a PDF or text file has none to
+    // read, so this fails fast with an actionable message instead of
+    // running OCR over raw file bytes and returning garbage.
+    if (mediaKindFor(mediaType) !== 'image') {
+      throw new Error(
+        'Free OCR can only read a photo, not a PDF or text file — take a photo instead, or add a Claude/Gemini API key in Scan settings to read documents directly.'
+      )
+    }
     const { ocrLanguage } = getReceiptSettings()
     return runSpatialOCR(imageBase64, mediaType, ocrLanguage, onProgress)
   },

@@ -503,6 +503,11 @@ export default function BillView() {
           ref={priceRef}
           placeholder="Price"
           inputMode="decimal"
+          // A pattern that itself contains "-" is what gets iOS to add a
+          // minus key to its decimal pad — without it, that keyboard has
+          // no way to type one at all, making a negative price (a
+          // discount line) impossible to enter on iPhone.
+          pattern="-?[0-9]*\.?[0-9]*"
           value={newItem.price}
           onChange={(e) => setNewItem((v) => ({ ...v, price: e.target.value }))}
         />

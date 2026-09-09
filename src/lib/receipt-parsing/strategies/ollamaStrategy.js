@@ -1,5 +1,6 @@
 import { getReceiptSettings } from '../../receiptSettings'
 import { buildExtractionPrompt, extractJsonItems } from '../extractionPrompt'
+import { mediaKindFor } from '../mediaKind'
 
 const DEFAULT_URL = 'http://localhost:11434'
 const DEFAULT_MODEL = 'qwen2.5vl'
@@ -43,7 +44,17 @@ export const ollamaStrategy = {
   // Always "configured" — sensible defaults exist for both fields, nothing
   // strictly required before trying it, unlike the BYOK cloud strategies.
   isConfigured: () => true,
+  // qwen2.5vl (and every other local Ollama vision model this plugs into)
+  // takes an `images` array, nothing else — a PDF or text file has nowhere
+  // to go here, so this fails fast with an actionable message rather than
+  // sending it as if it were a photo and getting a confusing model error
+  // back.
   parse: (imageBase64, mediaType, onProgress, categoryNames = []) => {
+    if (mediaKindFor(mediaType) !== 'image') {
+      throw new Error(
+        "Local Ollama can only read a photo, not a PDF or text file — take a photo instead, or switch to Claude/Gemini in Scan settings."
+      )
+    }
     const { ollamaUrl, ollamaModel } = getReceiptSettings()
     return callOllama(imageBase64, mediaType, ollamaUrl || DEFAULT_URL, ollamaModel || DEFAULT_MODEL, categoryNames)
   },

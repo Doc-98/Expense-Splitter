@@ -87,6 +87,7 @@ export default function ItemRow({
                 className="item-editable"
                 inputClassName="item-editable-input item-money-input"
                 inputMode="decimal"
+                pattern="-?[0-9]*\.?[0-9]*"
                 value={String(item.unit_price)}
                 display={format(item.unit_price)}
                 onSave={saveUnitPrice}
@@ -109,6 +110,7 @@ export default function ItemRow({
           className="item-editable mono item-price"
           inputClassName="item-editable-input item-money-input"
           inputMode="decimal"
+          pattern="-?[0-9]*\.?[0-9]*"
           value={String(item.total_price)}
           display={format(item.total_price)}
           onSave={saveTotalPrice}
