@@ -1,12 +1,93 @@
 import { useMemo, useState } from 'react'
+import {
+  GroupsNavIcon,
+  ReceiptIcon,
+  SettleIcon,
+  ShareIcon,
+  PieChartIcon,
+  SettingsIcon,
+  ProfileIcon,
+  MenuIcon,
+} from './icons'
+import SettingsNav from './SettingsNav'
 
-// Each section carries its own plain-text `keywords` separate from the JSX
+// A small inline glyph dropped into a sentence right where it names a
+// real on-screen control (the Stats icon, the Share icon, a bill's ⋮
+// menu) — reusing the exact same icons.jsx component the real button
+// renders, so this can never quietly drift out of sync with the actual
+// UI the way a screenshot would the next time an icon changes.
+function Glyph({ Icon }) {
+  return <Icon size={14} className="guide-glyph" />
+}
+
+// A small, inert mockup of the item-split chip row (see "Choosing who
+// splits each item") — real .buyer-chip markup, not a screenshot, so it
+// always matches the actual control pixel-for-pixel and needs no upkeep
+// of its own. Not a real form: the checkboxes are just there for the
+// checked-look, nothing here is clickable.
+function ChipDemo() {
+  return (
+    <div className="chip-row guide-demo" aria-hidden="true">
+      <span className="buyer-chip active">
+        <input type="checkbox" checked readOnly /> Alex
+      </span>
+      <span className="buyer-chip active">
+        <input type="checkbox" checked readOnly /> Sam
+      </span>
+      <span className="buyer-chip">
+        <input type="checkbox" readOnly /> Jo
+      </span>
+    </div>
+  )
+}
+
+// A tiny "before/after" mockup for Settle Up's own simplification — three
+// raw debts collapsing to the one payment that has the same net effect.
+// Same .balance-positive/.balance-negative classes a real bill row's
+// "You lent…"/"You borrowed…" line uses, so the colors already mean what
+// they mean everywhere else in the app.
+function SettleDemo() {
+  return (
+    <div className="guide-demo guide-settle-demo" aria-hidden="true">
+      <p className="muted guide-demo-label">What actually happened</p>
+      <p className="guide-settle-row">
+        Alex <span className="balance-negative">owes Sam $10</span>
+      </p>
+      <p className="guide-settle-row">
+        Sam <span className="balance-negative">owes Jo $10</span>
+      </p>
+      <p className="guide-settle-row">
+        Jo <span className="balance-negative">owes Alex $10</span>
+      </p>
+      <p className="muted guide-demo-label">Settle up shows instead</p>
+      <p className="guide-settle-row">
+        <span className="balance-positive">Nobody owes anybody — it nets out to zero</span>
+      </p>
+    </div>
+  )
+}
+
+// A non-interactive stand-in for a row's real "⋮" button, so a topic that
+// says "tap ⋮" can show the actual glyph inline instead of just the
+// character — same .row-menu-btn styling the real one uses.
+function MenuGlyphDemo() {
+  return (
+    <button type="button" className="row-menu-btn guide-demo-inline" tabIndex={-1} aria-hidden="true">
+      ⋮
+    </button>
+  )
+}
+
+// Each topic carries its own plain-text `keywords` separate from the JSX
 // body it renders — searching rendered JSX at runtime would be fragile;
-// this way the search has exact, deliberate control over what a query like
-// "qr" or "budget" actually matches, independent of the prose wording.
+// this way the search has exact, deliberate control over what a query
+// like "qr" or "budget" actually matches, independent of the prose
+// wording.
 const GROUPS = [
   {
+    id: 'getting-started',
     label: 'Getting started',
+    Icon: GroupsNavIcon,
     sections: [
       {
         id: 'groups',
@@ -18,16 +99,14 @@ const GROUPS = [
             <p>
               A <strong>group</strong> is a household, trip, or any set of people who share
               expenses. The groups list comes first on that page — <strong>Create a new
-              group</strong> is its own section below the list (10 groups per page, with a page
-              selector once you've got more than that), so the list itself is what you see first.
-              Or join an existing one via an invite link.
+              group</strong> is its own section below it (10 groups per page). Or join an
+              existing one via an invite link.
             </p>
             <p>
-              <strong>Invite</strong> lives in Group Settings, next to Members — it opens a QR
-              code (great for someone standing right next to you) and a{' '}
-              <strong>Share invite link</strong> option that uses your phone's normal share menu
-              — straight into WhatsApp, Messages, wherever, or copies the link if sharing isn't
-              available.
+              <strong>Invite</strong> lives in Group Settings, next to Members — a QR code for
+              someone standing next to you, or a <strong>Share invite link</strong> button that
+              opens your phone's own share menu (straight into WhatsApp, Messages, wherever), or
+              just copies the link if sharing isn't available.
             </p>
           </>
         ),
@@ -35,64 +114,105 @@ const GROUPS = [
       {
         id: 'personal',
         title: 'Personal spending — tracking just your own',
+        keywords: 'personal solo alone just me financial companion budget my own spending',
+        body: (
+          <p>
+            The <strong>Personal</strong> tab on the groups list opens a space that's just yours —
+            created automatically the first time you open it. Categories, budgets, receipt
+            scanning, subscriptions, stats, and CSV export all work exactly like a normal group;
+            the only thing missing is anything about other people (Invite, "paid by"/"split with",
+            Settle Up), since there's never anyone in it but you. It counts toward{' '}
+            <strong>Your Stats</strong> automatically, right alongside your real groups.
+          </p>
+        ),
+      },
+      {
+        id: 'bank-import-basics',
+        title: 'Importing a bank statement',
         keywords:
-          'personal solo alone just me financial companion budget my own spending bank statement import transactions recurring subscription duplicate excel xlsx csv chatgpt claude gemini prompt copy paste api key match bank categories mapping',
+          'bank statement import transactions csv excel xlsx column match header mobile personal',
         body: (
           <>
             <p>
-              The <strong>Personal</strong> tab on the groups list opens a space that's just
-              yours — created automatically the first time you open it, no setup needed.
-              Categories, budgets, receipt scanning, subscriptions, stats, and CSV export
-              all work exactly like a normal group; the only thing missing is anything about
-              other people (Invite, "paid by"/"split with" pickers, Settle Up), since there's
-              never anyone in it but you.
-            </p>
-            <p>
-              It counts toward <strong>Your Stats</strong> automatically, right alongside your
-              real groups.
-            </p>
-            <p>
               <strong>Group settings → Data → Import a bank statement</strong> turns a bank or
-              credit-card statement into bills — a CSV or Excel export from your bank if it
-              offers one (matched against a header row locally, no AI required — Excel is there
-              for mobile, since redacting a PDF or exporting to CSV is realistically a
-              desktop-only step), or a PDF read by whichever AI service you've set up in{' '}
-              <strong>Scan settings</strong>. Strip anything sensitive beyond the transactions
-              themselves before uploading a PDF — it's sent to that provider to be read. No Claude
-              or Gemini key set up here at all? A collapsible section on that same screen holds a
-              ready-made prompt to copy into whichever AI chat app you already use (ChatGPT,
-              Claude.ai, Gemini) — attach your own redacted statement there and paste the CSV it
-              hands back in; the prompt asks for a category guess too, using your group's own
-              categories, so it goes straight through the same review flow as an upload. If you do
-              have an AI service configured, CSV and Excel imports use it too: it double-checks
-              the automatic column match against a few sample rows (only overriding it, with a
-              notice to double-check dates and amounts, when the two genuinely disagree) and
-              suggests a category for every transaction — the same AI pass PDF imports and{' '}
-              <strong>/categorize</strong> already use. Unlike a PDF, which needs AI to read at
-              all, CSV/Excel's own column match works standalone — so the double-check specifically
-              has its own on/off checkbox right on the import screen, for anyone who'd rather not
-              use it (out of API quota, or just doesn't want this file's data going to that
-              provider) without losing CSV/Excel import altogether. If your bank's own export
-              already has a category for each transaction, that's trusted over a fresh guess — but
-              since a bank's own category names almost never match yours (and might be in a
-              different language), a one-time "Match bank categories" step comes up first, asking
-              you to match each one to a category of yours. That choice is remembered, so the same
-              bank's categories only ever need matching once. Review happens one transaction
-              at a time rather than a single long list — each card has an editable description
-              (tap it to fix up the bank's own wording before it becomes a bill title), a category
-              suggestion, and a checkbox before it's saved; a transaction that looks like it's
-              already been imported (an overlapping statement period) or already recorded as a
-              bill in one of your other groups (a shared expense showing up on your own statement
-              too) defaults to unchecked either way — still reviewable, in case either flag is a
-              false positive. A <strong>← Back</strong> button is always there to fix an earlier
-              card if you catch a mistake. Every transaction becomes a real bill the moment you
-              move past its card, not all at once at the end — so closing the tab partway through
-              a long statement loses nothing already confirmed; <strong>Group settings →
-              Data</strong> shows "Resume bank statement import" the next time you're ready to
-              finish the rest. A charge that repeats on a regular schedule isn't detected
-              automatically here — set it up as a Subscription by hand from{' '}
-              <strong>Group settings → Subscriptions</strong> if you'd like it generated
-              automatically going forward.
+              credit-card statement into bills, in either group or in your Personal space.
+            </p>
+            <ul>
+              <li>
+                A <strong>CSV or Excel</strong> export from your bank, if it offers one — matched
+                against its own header row locally, no AI required. Excel is there specifically
+                for mobile, since redacting a PDF or exporting to CSV is realistically a
+                desktop-only step.
+              </li>
+              <li>
+                A <strong>PDF</strong>, read by whichever AI service you've set up in{' '}
+                <strong>Scan settings</strong>. Strip anything sensitive beyond the transactions
+                themselves first — it's sent to that provider to be read.
+              </li>
+            </ul>
+            <p>
+              No Claude or Gemini key set up at all? A collapsible section on the same screen
+              holds a ready-made prompt to copy into whichever AI chat app you already use
+              (ChatGPT, Claude.ai, Gemini) — attach your own redacted statement there and paste
+              back the CSV it hands you.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'bank-import-categorization',
+        title: 'Bank import: smarter categorization',
+        keywords:
+          'bank statement categorization category ai claude gemini chatgpt prompt copy paste api key double check',
+        body: (
+          <p>
+            If you have an AI service configured, both the CSV/Excel and PDF paths use it to
+            suggest a category for every transaction — the same pass PDF imports and{' '}
+            <strong>/categorize</strong> already use — and, for CSV/Excel specifically, to
+            double-check the automatic column match against a few sample rows (only overriding it,
+            with a notice to double-check dates and amounts, when the two genuinely disagree).
+            Since CSV/Excel's own column match already works standalone without AI, that
+            double-check has its own on/off checkbox right on the import screen — for anyone out
+            of API quota, or who'd rather not send this file's data to that provider, without
+            losing CSV/Excel import altogether. The bring-your-own-chat prompt (see above) asks
+            for a category guess too, using your group's own categories, so it round-trips straight
+            back in the same way.
+          </p>
+        ),
+      },
+      {
+        id: 'bank-import-review',
+        title: 'Bank import: review, matching categories & resuming',
+        keywords:
+          'bank statement review match bank categories mapping resume duplicate already imported recurring subscription',
+        body: (
+          <>
+            <p>
+              If your bank's own export already tags a transaction with a category, that's trusted
+              over a fresh guess — but since a bank's own category names almost never match yours
+              (and might be in another language), a one-time <strong>Match bank categories</strong>{' '}
+              step comes first, asking you to match each one to a category of yours. That choice is
+              remembered, so the same bank's categories only ever need matching once.
+            </p>
+            <p>
+              Review happens one transaction at a time, not a single long list. Each card has an
+              editable description (tap it to clean up the bank's own wording before it becomes a
+              bill title), a category suggestion, and a checkbox before it's saved — a transaction
+              that looks already imported (an overlapping statement period) or already recorded
+              elsewhere (a shared expense on your own statement too) defaults to unchecked either
+              way, still reviewable in case that flag is wrong. A <strong>← Back</strong> button is
+              always there to fix an earlier card.
+            </p>
+            <p>
+              Every transaction becomes a real bill the moment you move past its card, not all at
+              once at the end — closing the tab partway through loses nothing already confirmed.{' '}
+              <strong>Group settings → Data</strong> shows "Resume bank statement import" next time
+              you're ready to finish the rest.
+            </p>
+            <p>
+              A charge that repeats on a schedule isn't detected automatically here — set it up as
+              a <strong>Subscription</strong> by hand instead if you'd like it generated going
+              forward.
             </p>
           </>
         ),
@@ -105,14 +225,14 @@ const GROUPS = [
           <>
             <p>
               Not everyone splitting a bill wants to install an app and sign up. From{' '}
-              <strong>Group settings → Guests</strong>, add
-              anyone by name — they can be assigned to items, front a bill, and owe or be owed
-              money exactly like a real account, with no login of their own. One person can run
-              the whole group for a party of guests if needed.
+              <strong>Group settings → Guests</strong>, add anyone by name — they can be assigned
+              to items, front a bill, and owe or be owed money exactly like a real account, with
+              no login of their own. One person can run the whole group for a party of guests if
+              needed.
             </p>
             <p>
-              Removing a guest just archives them — their history stays on old bills, and they
-              can be restored any time.
+              Removing a guest just archives them — their history stays on old bills, and they can
+              be restored any time.
             </p>
           </>
         ),
@@ -120,86 +240,111 @@ const GROUPS = [
     ],
   },
   {
+    id: 'bills-splitting',
     label: 'Bills & splitting',
+    Icon: ReceiptIcon,
     sections: [
       {
-        id: 'adding-a-bill',
-        title: 'Adding a bill and splitting items',
-        keywords: 'bill item add scan type manual paid by default split pagination page delete select share menu edit rename price quantity unit total borrowed lent owe balance date backdate postdate',
+        id: 'adding-items',
+        title: 'Adding items to a bill',
+        keywords:
+          'bill item add scan type manual price quantity unit total edit rename math expression calculate',
         body: (
           <>
             <p>
-              Inside a group, <strong>Start</strong> a new bill, then add items either by typing
-              them in by hand or by scanning a receipt photo.
-            </p>
-            <p>
-              Every item has a row of name chips underneath it — <strong>tap a person's chip to
-              include or exclude them</strong> from that specific item's split. New items default
-              to splitting with everyone currently in the group, unless you've changed the{' '}
-              <strong>"New items split with"</strong> row near the top of the bill — handy when
-              only some of the group actually did that particular shop.
+              Inside a group, <strong>Start</strong> a new bill, then add items by typing them in
+              or scanning a receipt photo (see <strong>Scanning a receipt</strong> below).
             </p>
             <p>
               Made a typo, or a scan misread a price? Tap an item's name, price, or quantity to
-              edit it right there — it turns into a text box; Enter or tapping away saves, Escape
-              backs out. A faint dotted underline marks what's tappable. No need to delete an item
-              and re-add it just to fix a mistake. Clearing a box completely and confirming it
-              always reverts to what it said before, never saves it blank or as zero.
+              edit it right there — a faint dotted underline marks what's tappable. Enter or
+              tapping away saves; Escape backs out; clearing a box completely and confirming it
+              always reverts to what it said before, never blank or zero.
             </p>
             <p>
-              Next to the total, a smaller "$1.29 x 2" shows the unit price and quantity behind
-              it — tap either number to change it, and the total follows. At quantity 1 the unit
-              price is hidden (it's the same number as the total already shown), but "x 1" stays
-              so you can still bump the quantity. Editing the total itself works the other way
-              around: quantity stays put and the unit price adjusts to match.
+              <strong>The Price field also does quick math</strong> — type{' '}
+              <code>2,30-1,25</code> and it saves as <code>1,05</code>. Handy for splitting a
+              shared line total or subtracting a discount by hand without reaching for a
+              calculator first.
             </p>
+            <p>
+              Next to the total, a smaller "$1.29 x 2" shows the unit price and quantity behind it
+              — tap either to change it, and the total follows. Editing the total itself works the
+              other way around: quantity stays put and the unit price adjusts to match.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'splitting-items',
+        title: 'Choosing who splits each item',
+        keywords: 'split with chip include exclude default new items',
+        body: (
+          <>
+            <p>
+              Every item has a row of name chips underneath it — tap one to include or exclude
+              that person from that specific item's split:
+            </p>
+            <ChipDemo />
+            <p>
+              New items default to splitting with everyone currently in the group, unless you've
+              changed the <strong>"New items split with"</strong> row near the top of the bill —
+              handy when only some of the group actually did that particular shop.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'paid-by-and-date',
+        title: "Paid by & the bill's date",
+        keywords: 'paid by front money date backdate postdate calendar picker',
+        body: (
+          <>
             <p>
               <strong>Paid by</strong> controls who fronted the money — usually one person, but
               see <strong>Multiple payers</strong> below if more than one person chipped in.
             </p>
             <p>
-              A bill's date — right-aligned, in small type just above the item list — is also
-              tap-to-edit, the same as an item's name or price. Most bills happen the same day
-              they're added and never need this, which is why it stays out of the way; it's there
-              for adding one a few days late without it landing in the wrong week's report, or for
-              fixing up a bill by hand (say, after an import missed it). Tapping it opens your
-              device's own date picker rather than a text box.
+              A bill's date — small type just above the item list — is tap-to-edit too, opening
+              your device's own date picker. Most bills happen the same day they're added and
+              never need this; it's there for adding one a few days late without it landing in the
+              wrong week's report, or fixing up a bill by hand after an import missed it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'managing-bill-list',
+        title: 'Managing your bill list',
+        keywords:
+          'pagination page delete select share menu lent borrowed owe balance bulk select all danger zone',
+        body: (
+          <>
+            <p>
+              A group with a lot of bills shows 15 at a time, newest first — handy after importing
+              a big batch from Splitwise.
             </p>
             <p>
-              A group with a lot of bills shows 15 at a time with a page selector at the bottom,
-              newest first — handy after importing a big batch from Splitwise.
+              Each bill's total sits next to its name, with — in italics underneath —{' '}
+              <span className="balance-negative">"You borrowed …"</span> if your share came to
+              more than you fronted, <span className="balance-positive">"You lent …"</span> if you
+              fronted more than your share, or "You are not involved" otherwise. This is just about
+              that one bill, separate from your overall group balance further down the page. Turn
+              it off everywhere from <strong>Settings → Groups</strong> if you'd rather keep the
+              list plainer.
             </p>
             <p>
-              Each bill's row also shows its total, right next to the name, and underneath it —
-              in italics — what that one bill means for you: <strong>"You borrowed …"</strong> in
-              red if your share came to more than you fronted, <strong>"You lent …"</strong> in
-              green if you fronted more than your share, or <strong>"You are not
-              involved"</strong> if you're neither paying nor assigned to anything on it. This is
-              just about that one bill, separate from your overall balance with the group further
-              down the page. Turn it off for every bill, in every group, from{' '}
-              <strong>Settings → Groups</strong> if you'd rather keep the list plainer.
+              The <MenuGlyphDemo /> on any bill opens <strong>Select</strong>, <strong>Share</strong>,
+              and <strong>Delete</strong> for that one bill — the same place you'd land tapping the
+              list's own <strong>Select</strong> toggle and checking that row yourself.
             </p>
             <p>
-              The <strong>⋮</strong> on any bill's row opens <strong>Select</strong>,{' '}
-              <strong>Share</strong>, and <strong>Delete</strong> for that one bill. Delete just
-              asks you to confirm; Select turns on selection mode with that bill already checked —
-              the same place you'd land by tapping the list's own <strong>Select</strong> toggle
-              above it and then checking that row yourself, so use whichever one you happen to
-              reach for first.
-            </p>
-            <p>
-              With bills selected, a bar above the list shows how many and offers{' '}
-              <strong>Share</strong> and <strong>Delete selected</strong>. Share sends them as one
-              message — a single bill reads exactly like sharing it from its own page; more than
-              one gets a running total added at the end. Delete selected confirms the count first.
-              Selection carries across pages, so picking some, paging over, and picking more before
-              acting on them together works fine. Selecting literally every bill and deleting them
-              is the one exception that needs the group admin, same as the Danger Zone button
-              below — anyone can delete a subset, however large.
-            </p>
-            <p>
-              For clearing out a group's entire history in one go instead of selecting hundreds of
-              rows, see <strong>Delete all bills</strong> in Group settings → Danger Zone.
+              With bills selected, a bar above the list offers <strong>Share</strong> (one message;
+              more than one bill adds a running total) and <strong>Delete selected</strong>{' '}
+              (confirms the count first). Selection carries across pages. Selecting literally
+              every bill and deleting them needs the group admin, same as{' '}
+              <strong>Delete all bills</strong> in <strong>Group settings → Danger Zone</strong> —
+              anyone can delete a smaller subset.
             </p>
           </>
         ),
@@ -207,27 +352,29 @@ const GROUPS = [
       {
         id: 'searching-filtering',
         title: 'Searching and filtering bills',
-        keywords: 'search filter tag category amount price range slider match any all',
+        keywords: 'search filter tag category amount price range slider match any all sticky',
         body: (
           <>
             <p>
               The search bar above a group's bill list matches a bill's title or note —
-              case-insensitive, and a partial word is enough, same as searching this guide itself.
-              <strong> Filters</strong> next to it opens a panel (closed by default) with two more
-              ways to narrow the list, which combine with the search and with each other.
+              case-insensitive, partial words fine. <strong>Filters</strong> next to it opens a
+              panel with two more ways to narrow the list, combining with search and each other:
             </p>
+            <ul>
+              <li>
+                <strong>Tags</strong> — one or more categories; <strong>Match any</strong> shows
+                bills with at least one, <strong>Match all</strong> only bills with every one.
+              </li>
+              <li>
+                <strong>Amount</strong> — a two-handle slider bounded by the group's own cheapest
+                and priciest bill, or tap either number to type an exact amount.
+              </li>
+            </ul>
             <p>
-              <strong>Tags</strong> — pick one or more categories to show only bills with an item
-              tagged that way (an item without its own tag counts as its bill's tag, or
-              "Uncategorized" if neither has one). With more than one tag picked,{' '}
-              <strong>Match any</strong> shows bills with at least one of them; <strong>Match
-              all</strong> shows only bills that have every picked tag somewhere in them.
-            </p>
-            <p>
-              <strong>Amount</strong> — a two-handle slider bounded by the group's actual cheapest
-              and priciest bill; drag either end to narrow the list to bills in that price range.
-              Or tap one of the two numbers below the slider to type an exact amount instead — same
-              tap-to-edit as an item's name or price.
+              Normally, opening a bill and coming back resets the search box and filters. Turn on{' '}
+              <strong>Sticky filters</strong> (<strong>Settings → Groups → Display</strong>) to
+              keep them exactly as you left them instead — a real page refresh still clears them
+              either way.
             </p>
           </>
         ),
@@ -235,23 +382,28 @@ const GROUPS = [
       {
         id: 'scanning',
         title: 'Scanning a receipt',
-        keywords: 'scan ocr gemini claude ollama photo camera api key',
+        keywords: 'scan ocr gemini claude ollama photo camera file pdf text html take choose api key',
         body: (
           <>
-            <p>Three ways to get items onto a bill without typing them all in:</p>
+            <p>
+              <strong>Scan a receipt</strong> offers two entry points: <strong>Take photo</strong>{' '}
+              jumps straight to your camera; <strong>Choose file</strong> opens your normal file
+              picker instead, and also accepts a receipt saved as a PDF, or a plain-text/HTML
+              export (an emailed confirmation, say) — not just a photo.
+            </p>
+            <p>Three ways to actually read whichever file you give it:</p>
             <ul>
               <li>
-                <strong>Free OCR</strong> — works immediately, no setup, entirely on your phone.
-                Best on a clear, well-lit photo.
+                <strong>Free OCR</strong> — no setup, entirely on your phone, images only. Best on
+                a clear, well-lit photo.
               </li>
               <li>
-                <strong>Google Gemini / Anthropic Claude</strong> — more accurate, needs your own
-                API key, set up once in <strong>Settings → Scan</strong> (tap your name, top
-                right).
+                <strong>Google Gemini / Anthropic Claude</strong> — more accurate, reads a PDF or
+                text file too, needs your own API key (<strong>Settings → Scan</strong>).
               </li>
               <li>
-                <strong>A local Ollama model</strong> — private, runs on your own computer, also
-                set up in Scan settings.
+                <strong>A local Ollama model</strong> — private, runs on your own computer, images
+                only, also set up in Scan settings.
               </li>
             </ul>
             <p>
@@ -269,19 +421,18 @@ const GROUPS = [
           <>
             <p>
               If more than one person fronted a bill, choose <strong>Multiple payers…</strong>{' '}
-              from the "Paid by" list. A small window opens where you can check off anyone who
-              contributed and type in exactly how much each of them paid.
+              from the "Paid by" list — check off who contributed and type exactly how much each
+              paid.
             </p>
             <p>
-              Nothing is saved until the amounts add up to <em>exactly</em> the bill's total — a
-              red message explains the gap until they do, and Confirm stays disabled. Closing the
-              window without confirming discards whatever you were typing; the last saved split is
-              untouched either way.
+              Nothing saves until the amounts add up to <em>exactly</em> the bill's total — a red
+              message explains the gap until they do, and Confirm stays disabled. Closing without
+              confirming discards whatever you were typing.
             </p>
             <p>
-              If you add another item after confirming a split, changing the total, a red warning
-              appears right on the bill until the split is fixed to match again — the bill still
-              works normally in the meantime.
+              Adding another item after confirming a split, and changing the total, shows a red
+              warning right on the bill until the split is fixed to match again — it still works
+              normally in the meantime.
             </p>
           </>
         ),
@@ -289,24 +440,24 @@ const GROUPS = [
       {
         id: 'categories',
         title: 'Categories: tracking how you spend, not just how much',
-        keywords: 'category categories tag tagging budget groceries stats',
+        keywords: 'category categories tag tagging budget groceries stats menu rename delete',
         body: (
           <>
             <p>
-              Every group starts with a small set of categories already set up — Groceries,
-              Eating out, Household, Bills & utilities, Transport, Health, Other — add, rename, or
-              delete your own from Group Settings any time.
+              Every group starts with a small set — Groceries, Eating out, Household, Bills &
+              utilities, Transport, Health, Other. Add your own from <strong>Group
+              Settings → Categories</strong>; each existing one's <MenuGlyphDemo /> menu covers{' '}
+              <strong>Rename</strong> and <strong>Delete</strong>.
             </p>
             <p>
-              Tagging a bill's <strong>Category</strong> (right next to "Paid by") covers the
-              whole receipt in one tap — the common case, since most shopping trips are mostly one
-              thing. If one specific item genuinely belongs somewhere else (a gift picked up
-              during a grocery run), tap the small colored dot on that item to override it just for
-              that one line.
+              Tagging a bill's <strong>Category</strong> (next to "Paid by") covers the whole
+              receipt in one tap — the common case. If one item genuinely belongs somewhere else
+              (a gift picked up during a grocery run), tap the small colored dot on that item to
+              override it just for that line.
             </p>
             <p>
-              Group Stats then breaks down spending by category, so you can see not just what you
-              spent, but on what.
+              <Glyph Icon={PieChartIcon} /> Group Stats then breaks down spending by category, so
+              you see not just what you spent, but on what.
             </p>
           </>
         ),
@@ -314,26 +465,36 @@ const GROUPS = [
     ],
   },
   {
+    id: 'settling-up',
     label: 'Settling up',
+    Icon: SettleIcon,
     sections: [
       {
         id: 'settling-up',
         title: 'Settling up',
-        keywords: 'settle up owe balance mark paid record payment delete',
+        keywords: 'settle up owe balance mark paid record payment delete simplify',
+        defaultOpen: true,
         body: (
-          <p>
-            Every group page shows a live <strong>Settle up</strong> section — who owes whom,
-            already simplified to the fewest payments needed. When money actually changes hands,
-            hit <strong>Mark paid</strong> on a suggested payment, or record one manually (handy
-            for a partial payment, or one that doesn't match a suggestion). Made a mistake? Any
-            payment can be deleted from the history.
-          </p>
+          <>
+            <p>
+              Every group page shows a live <strong>Settle up</strong> section — who owes whom,
+              already simplified to the fewest payments needed:
+            </p>
+            <SettleDemo />
+            <p>
+              When money actually changes hands, hit <strong>Mark paid</strong> on a suggested
+              payment, or record one manually (handy for a partial payment, or one that doesn't
+              match a suggestion). Made a mistake? Any payment can be deleted from the history.
+            </p>
+          </>
         ),
       },
     ],
   },
   {
+    id: 'sharing-importing',
     label: 'Sharing & importing your data',
+    Icon: ShareIcon,
     sections: [
       {
         id: 'recaps',
@@ -342,63 +503,62 @@ const GROUPS = [
         body: (
           <>
             <p>
-              A single bill, and a group's page (the share icon next to Stats and Settings), each
-              have a <strong>Share</strong> button — tap it for a small menu with every way to get
-              that data out. Your Personal space works the same way; since there's nobody else to
-              split with, its recap is total spent and a by-category breakdown instead of who owes
-              whom.
+              <Glyph Icon={ShareIcon} /> A single bill, and a group's own page (next to Stats and
+              Settings), each have a <strong>Share</strong> button with every way to get that data
+              out. Your Personal space works the same way, with a total-spent + by-category recap
+              instead of who owes whom.
             </p>
             <ul>
               <li>
-                <strong>Share as text</strong> — quick, plain text formatted for pasting straight
-                into a chat.
+                <strong>Share as text</strong> — plain text formatted for pasting into a chat.
               </li>
               <li>
-                <strong>Download as PDF</strong> — opens your browser's print dialog; choose
-                "Save as PDF."
+                <strong>Download as PDF</strong> — your browser's print dialog; choose "Save as
+                PDF."
               </li>
               <li>
-                <strong>Export as CSV</strong> — a spreadsheet-friendly file rather than a
-                human-readable recap. A bill's own CSV is one row per item; a group's is one row
-                per item across every bill in the group, with the date, bill, category, and who
-                paid, so it can be opened in a spreadsheet or backed up outside the app.
+                <strong>Export as CSV</strong> — one row per item (a bill), or per item across
+                every bill (a group), with date/bill/category/payer, for a spreadsheet or backup.
               </li>
             </ul>
           </>
         ),
       },
       {
-        id: 'splitwise',
+        id: 'splitwise-import',
         title: 'Importing from Splitwise',
-        keywords: 'splitwise import migrate csv expense net balance review multiple payers proof check total balance',
+        keywords: 'splitwise import migrate csv expense net balance match member guest',
+        body: (
+          <p>
+            Already tracking expenses in Splitwise? Export your group from Splitwise as a CSV,
+            then use <strong>Import bills from Splitwise</strong> in that group's{' '}
+            <strong>Group settings → Data</strong> — realistically a one-time thing, so it isn't on
+            the group page itself. Each Splitwise expense becomes one bill, dated to match the
+            original, after matching each Splitwise name to an existing member or guest.
+          </p>
+        ),
+      },
+      {
+        id: 'splitwise-review',
+        title: 'Splitwise: reviewing edge cases & the balance check',
+        keywords: 'splitwise review multiple payers proof check total balance skip',
         body: (
           <>
             <p>
-              Already tracking expenses in Splitwise? Export your group from Splitwise as a CSV,
-              then use <strong>Import bills from Splitwise</strong> in that group's{' '}
-              <strong>Group settings → Data</strong> to bring them in — realistically a one-time
-              thing, so it isn't on the group page itself. Each Splitwise expense becomes one bill,
-              dated to match the original. You'll be asked to match each Splitwise name to an
-              existing member or guest before importing.
-            </p>
-            <p>
               Splitwise only exports each person's net balance per expense, not each payer's exact
-              contribution. That's enough to reconstruct the overwhelming majority of expenses
-              automatically, but not a personal expense someone logged purely for their own
-              tracking (nets out to exactly 0, indistinguishable from "not involved"), or a real
-              multiple-payer expense (Splitwise doesn't say how much each payer put in). Anything
-              like that gets its own quick review step right after matching people — one expense
-              at a time, pick who paid and who it's split with — rather than being silently
-              guessed at or dropped. <strong>Skip for now</strong> is always there if you'd rather
-              come back to one later; either way it's tagged in the bill's own note, so the
-              group's search always finds it again.
+              contribution — enough to reconstruct most expenses automatically, but not a personal
+              expense logged just for someone's own tracking (nets to exactly 0, indistinguishable
+              from "not involved"), or a real multiple-payer expense. Anything like that gets its
+              own quick review step right after matching people — one expense at a time, pick who
+              paid and who it's split with. <strong>Skip for now</strong> is always there; either
+              way it's tagged in the bill's own note, so the group's search always finds it again.
             </p>
             <p>
               If Splitwise's export includes its own trailing balance summary, the import finishes
-              with a quick proof-check: a green confirmation if this app's own math lands on the
-              same balance Splitwise had for everyone, or a red one listing exactly whose doesn't
-              match and by how much. Either way you can continue — it's there to help you spot a
-              problem, not to block you.
+              with a quick proof-check: green if this app's own math lands on the same balance
+              Splitwise had for everyone, or red listing exactly whose doesn't match and by how
+              much. Either way you can continue — it's there to help you spot a problem, not to
+              block you.
             </p>
           </>
         ),
@@ -406,7 +566,9 @@ const GROUPS = [
     ],
   },
   {
+    id: 'stats',
     label: 'Stats',
+    Icon: PieChartIcon,
     sections: [
       {
         id: 'stats',
@@ -416,40 +578,28 @@ const GROUPS = [
           <>
             <p>
               A group's page shows a quick "this week / this month" total near the bottom.{' '}
-              <strong>Group stats</strong> (from a group's page) goes further — spending by
+              <Glyph Icon={PieChartIcon} /> <strong>Group stats</strong> goes further — spending by
               person, by category, by month, and the biggest bills. <strong>Your stats</strong>{' '}
-              (the pie-chart icon on the groups list) does the same across every group you're in,
-              plus your overall balance — including a frozen record for any group you've since
-              left.
+              does the same across every group you're in, plus your overall balance, including a
+              frozen record for any group you've since left.
             </p>
             <p>
-              Both let you switch between week, month, year, and all-time views, and both show a
-              "▲/▼ vs last period" badge next to the total and each category when you're looking
-              at a week, month, or year (there's no previous period to compare "all time" against).
-              On Your Stats specifically, both the top comparison and the category breakdown
-              underneath include any group you've since left — the one exception is a group left
-              before this app tracked category-level history, whose frozen record only has the
-              plain totals, not a category breakdown.
+              Both switch between week/month/year/all-time, and show a "▲/▼ vs last period" badge
+              (except on "all time," which has nothing to compare against). Your Stats' own
+              comparison and category breakdown include any group you've left too — the one
+              exception is a group left before this app tracked category history, whose frozen
+              record only has plain totals.
             </p>
             <p>
-              A few controls on the week/month/year/all-time selector itself: viewing by month
-              adds a ‹‹ / ›› pair that jumps a full year at a time, for checking something from a
-              while back without clicking through one period after another. Viewing by week adds
-              two extra pairs — ‹‹ / ›› for a month, ‹‹‹ / ››› for a year — since a year-jump
-              alone still leaves a lot of clicking to land on the exact week you want. Every stats
-              page — Your Stats and every group's own — opens on whichever period is your saved
-              default, set from <strong>Settings → Profile</strong>. It's one shared default, not a
-              separate one per page: change it there and both stats pages open on it. That, and
-              where the "Budgets" section sits on Your Stats (top or bottom of the page, also set
-              from Settings → Profile), are both saved only on this device, same as currency and
-              dark mode.
+              Viewing by month adds a ‹‹/›› pair that jumps a full year; viewing by week adds two
+              more pairs (a month-jump and a year-jump), since a year-jump alone still leaves a lot
+              of clicking to land on one exact week. Every stats page opens on your saved default
+              period (<strong>Settings → Profile</strong>) — one shared default, not per page.
             </p>
             <p>
-              On a group with a lot of history, both stats pages load the last year or two first so
-              they open quickly, then keep loading further back in the background — you'll only
-              notice if you jump to "All time" or page back further than that before it's finished,
-              in which case a small note says the numbers may still be incomplete until it catches
-              up.
+              On a group with a lot of history, both pages load the last year or two first so they
+              open quickly, then keep loading further back in the background — a small note appears
+              if you jump further than that before it's finished.
             </p>
           </>
         ),
@@ -462,22 +612,18 @@ const GROUPS = [
           <>
             <p>
               Set a monthly budget per category from <strong>Settings → Budgets</strong> — a
-              personal setting, not a group one, since it's tracking your own spending across
-              every group you're in, not any one group's total. There's one amount field for each
-              of the seven default categories, plus one for every custom category across your
-              groups.
+              personal setting, tracking your own spending across every group you're in, not any
+              one group's total.
             </p>
             <p>
-              <strong>A category with the same name is one and the same budget</strong>, even
-              across different groups — "Wine" in one group and "wine" in another (or the same
-              name as one of the defaults) share a single budget rather than getting their own
-              separate one. Worth knowing before you're confused about why a category you swear
-              you didn't set a budget for already has one.
+              <strong>A category with the same name is one shared budget</strong>, even across
+              different groups — "Wine" in one group and "wine" (or the same name as a default) in
+              another share a single budget rather than two separate ones.
             </p>
             <p>
-              Once set, it shows up as a progress bar on Your Stats — always compared against the
-              current calendar month, and always just your own share of what's been spent, not
-              anything you've fronted for the rest of the group.
+              Once set, it shows as a progress bar on Your Stats — always the current calendar
+              month, and always just your own share of what's been spent, not anything you've
+              fronted for the rest of the group.
             </p>
           </>
         ),
@@ -485,53 +631,61 @@ const GROUPS = [
     ],
   },
   {
+    id: 'group-management',
     label: 'Group management',
+    Icon: SettingsIcon,
     sections: [
       {
-        id: 'admin',
-        title: 'Group settings and permissions',
-        keywords:
-          'admin permission remove kick leave transfer make owner delete all bills delete group danger zone general members guests categories subscriptions data tabs nav',
+        id: 'group-settings-nav',
+        title: "Group Settings: what's where",
+        keywords: 'group settings nav tabs general members guests categories subscriptions data danger zone',
+        body: (
+          <p>
+            <Glyph Icon={SettingsIcon} /> Tap the gear on a group's own page for the same side-nav
+            layout as the account Settings page: <strong>General</strong> (the group's name);{' '}
+            <strong>Members</strong> and <strong>Guests</strong> (real groups only — Personal has
+            just you, forever); <strong>Categories</strong>; <strong>Subscriptions</strong> (see
+            below); and <strong>Data</strong>, for bringing in history from elsewhere (Splitwise,
+            a bank statement, categorizing older bills). <strong>Danger Zone</strong> sits pinned
+            at the bottom, split off in warm red — same treatment the account page gives Sign Out.
+          </p>
+        ),
+      },
+      {
+        id: 'admin-permissions',
+        title: 'Admin & permissions',
+        keywords: 'admin permission remove kick leave transfer make owner',
         body: (
           <>
             <p>
-              Group settings has the same side-nav layout as the account Settings page (tap the
-              gear on a group's own page to get there): <strong>General</strong> (the group's
-              name); <strong>Members</strong> and <strong>Guests</strong> — each its own tab now,
-              only shown for a real group (Personal has just you, forever, so neither applies
-              there); <strong>Categories</strong>; <strong>Subscriptions</strong> (see below); and{' '}
-              <strong>Data</strong>, for bringing in history from elsewhere (Splitwise, a bank
-              statement, categorizing older bills). <strong>Danger Zone</strong> sits pinned at
-              the bottom of the nav, split off in warm red — same treatment the account page gives
-              Sign Out.
-            </p>
-            <p>
-              Each group has one <strong>admin</strong> — whoever created it, marked with an
-              "(admin)" label in the member list — unless the role's been handed to someone else
-              via <strong>Make admin</strong> next to their name. Only the admin can remove
-              another real member. If the admin leaves, the role passes automatically to whoever's
-              been in the group the longest.
+              Each group has one <strong>admin</strong> — whoever created it, marked "(admin)" in
+              the member list — unless handed to someone else via <strong>Make admin</strong> next
+              to their name. Only the admin can remove another real member; if the admin leaves,
+              the role passes automatically to whoever's been in the group longest.
             </p>
             <p>
               Guests and categories are different — any active member can add, rename, or remove
-              either, since that's managing shared group data rather than removing a person
-              against their will.
-            </p>
-            <p>
-              <strong>Danger Zone</strong> has three things, not all shown to everyone.{' '}
-              <strong>Leave group</strong> is there for anyone, any time — a plain "are you sure"
-              is enough for that one, the same confirm-sheet pattern as Sign Out. The other two are
-              admin-only, and both need you to type the group's exact name before the confirm
-              button even enables, since either one erases something in a single click that can't
-              be undone: <strong>Delete all bills</strong> wipes every bill in the group at once,
-              items and payer splits included, with a checkbox to also clear the settle-up
-              (payment) history — members and categories stay untouched either way. <strong>Delete
-              group</strong> goes further still: the group itself, gone — every member, guest,
-              category, subscription, bill, and payment along with it. Neither Leave nor Delete
-              group is offered on your Personal space; it isn't something you leave or delete, it's
-              recreated automatically the next time you open that tab.
+              either, since that's shared group data, not removing a person against their will.
             </p>
           </>
+        ),
+      },
+      {
+        id: 'danger-zone',
+        title: 'Danger Zone: leaving or deleting a group',
+        keywords: 'danger zone delete all bills delete group leave typed confirm',
+        body: (
+          <p>
+            <strong>Leave group</strong> is there for anyone, any time — a plain "are you sure,"
+            same confirm-sheet pattern as Sign Out. The other two are admin-only, and both need you
+            to type the group's exact name before the confirm button even enables:{' '}
+            <strong>Delete all bills</strong> wipes every bill at once (items and payer splits
+            included, with a checkbox to also clear payment history — members and categories stay
+            untouched), and <strong>Delete group</strong> goes further still — the group itself,
+            gone, along with every member, guest, category, subscription, bill, and payment.
+            Neither is offered on your Personal space; it isn't something you leave or delete, it's
+            recreated automatically next time you open that tab.
+          </p>
         ),
       },
       {
@@ -542,22 +696,17 @@ const GROUPS = [
           <>
             <p>
               Set up something that repeats — rent, a subscription, a utility bill — once, from{' '}
-              <strong>Group settings → Subscriptions</strong>, and it generates itself
-              automatically going forward: a fixed amount, one payer, a fixed split, on a weekly,
-              monthly, or yearly schedule you pick when you create it. Each occurrence lands as an
-              ordinary bill the next time anyone opens the group on or after its due date — there's
-              no scheduled job behind this, so a group that's gone quiet for a while catches up on
-              everything it missed, in order, rather than skipping ahead.
+              <strong>Group settings → Subscriptions</strong>: a fixed amount, one payer, a fixed
+              split, on a weekly/monthly/yearly schedule. Each occurrence lands as an ordinary bill
+              the next time anyone opens the group on or after its due date — a group gone quiet
+              for a while catches up on everything it missed, in order.
             </p>
             <p>
-              The <strong>⋮</strong> on any subscription opens <strong>Edit</strong>,{' '}
-              <strong>Pause</strong>/<strong>Resume</strong>, and <strong>Delete</strong>. Edit
-              covers what a generated bill actually contains — title, amount, category, who paid,
-              who splits it — but not its frequency or start date; those two are locked in once
-              it's created, since changing them risks throwing off which occurrences already
-              happened. Delete and set up a fresh one instead if the schedule itself needs to
-              change. Deleting asks whether to also delete every bill this subscription has already
-              generated, or leave them exactly as they are.
+              The <MenuGlyphDemo /> on any subscription opens <strong>Edit</strong> (title, amount,
+              category, payer, split — not frequency or start date, locked in once created, since
+              changing them risks throwing off which occurrences already happened),{' '}
+              <strong>Pause</strong>/<strong>Resume</strong>, and <strong>Delete</strong> (asks
+              whether to also delete every bill it's already generated).
             </p>
           </>
         ),
@@ -565,39 +714,48 @@ const GROUPS = [
     ],
   },
   {
+    id: 'your-account',
     label: 'Your account',
+    Icon: ProfileIcon,
     sections: [
       {
         id: 'account-settings',
         title: 'The Settings page',
         keywords:
-          'currency dollar euro pound symbol dark mode light theme settings username display name rename profile budget threshold scan menu hamburger sign out leave group nav side quick stats lent borrowed',
+          'currency dollar euro pound symbol dark mode light theme settings username display name rename profile budget threshold scan menu hamburger sign out leave group nav side quick stats lent borrowed sticky filters',
         body: (
           <>
             <p>
-              Tapping your name (top right, anywhere in the app) opens <strong>Settings</strong> —
-              everything account-level, in one place, arranged into sections down a side menu:
-              your own display name, dark mode, currency, and a saved default period for both
-              stats pages (<strong>Profile</strong>); the groups you're in, with a way to leave one
-              directly, plus two display switches covering every group's page at once — Quick
-              stats, and each bill's own "You lent/borrowed" line
-              (<strong>Groups</strong>); a personal monthly budget per category
-              (<strong>Budgets</strong>); how receipts get scanned (<strong>Scan</strong>); this
-              guide; what changed in the version you're running, with a way to check for a newer
-              one (<strong>Updates</strong>); and what the app is (<strong>About</strong>).
-              <strong>Sign Out</strong> sits at the very bottom of the menu, apart from the rest —
-              it's an action, not a section, and asks you to confirm first.
+              <Glyph Icon={ProfileIcon} /> Tapping your name (top right, anywhere in the app) opens{' '}
+              <strong>Settings</strong> — everything account-level, arranged down a side menu:
+            </p>
+            <ul>
+              <li>
+                <strong>Profile</strong> — display name, dark mode, currency, saved default period
+                for both stats pages.
+              </li>
+              <li>
+                <strong>Groups</strong> — every group you're in, with a way to leave one directly,
+                plus display switches covering every group's page at once: Quick stats, each
+                bill's "You lent/borrowed" line, and <strong>Sticky filters</strong> (keeps a
+                group's search/filters intact after opening a bill and coming back).
+              </li>
+              <li>
+                <strong>Budgets</strong> — a personal monthly limit per category.
+              </li>
+              <li>
+                <strong>Scan</strong> — how receipts get read.
+              </li>
+              <li>This guide, plus Updates (what's new, check for a newer version) and About.</li>
+            </ul>
+            <p>
+              <strong>Sign Out</strong> sits at the very bottom, apart from the rest — an action,
+              not a section, and asks you to confirm first.
             </p>
             <p>
-              The menu starts as icons only — tap the <strong>☰</strong> at the top of the page to
-              expand it with labels, handy the first few times until the icons alone are enough to
-              find your way back to one. Whichever section you're on replaces the one before it
-              right there, rather than navigating to a whole new page.
-            </p>
-            <p>
-              Scan settings also still work as their own direct link from wherever else the app
-              already points at it (wherever a scan strategy is shown) — Settings collecting
-              everything in one place doesn't take that away.
+              <Glyph Icon={MenuIcon} /> The menu starts as icons only — tap the menu button at the
+              top of the page to expand it with labels. Scan settings also still work as their own
+              direct link from wherever else the app already points at it.
             </p>
           </>
         ),
@@ -606,7 +764,7 @@ const GROUPS = [
   },
 ]
 
-function Section({ section, forceOpen }) {
+function Topic({ section, forceOpen }) {
   return (
     <details className="guide-section" open={forceOpen || section.defaultOpen}>
       <summary>{section.title}</summary>
@@ -620,14 +778,34 @@ function Section({ section, forceOpen }) {
 // any existing deep link or bookmark), and inline inside the Settings page
 // for anyone browsing in from there instead — same pattern as
 // BudgetsSection.jsx/ScanSettingsSection.jsx/AboutSection.jsx.
-export default function GuideSection() {
+//
+// Browsing (no search query) is one group's topics at a time, picked via
+// `compact`:
+// - false (default, the standalone /guide page, which has the full page
+//   width to itself) — the same SettingsNav.jsx rail/visual language the
+//   account and Group Settings pages already use, so this reads as one
+//   more rail page rather than a new pattern of its own.
+// - true (Settings.jsx passes this for its own "How to Use" section) — a
+//   horizontally scrollable row of chips instead. A second full rail
+//   nested inside Settings' own already-narrow content column, on top of
+//   Settings' own rail right next to it, measured out to a genuinely
+//   cramped content width on a real phone — this avoids stacking two
+//   vertical rails for the sake of reusing the exact same component.
+//
+// Searching bypasses both entirely and flattens every group's matching
+// topics into one list, force-opened — exactly what it already did
+// before this grouping existed, since a search is answering "where's the
+// bit about X," not "let me browse category by category."
+export default function GuideSection({ compact = false }) {
   const [query, setQuery] = useState('')
+  const [activeGroupId, setActiveGroupId] = useState(GROUPS[0].id)
+  const [expanded, setExpanded] = useState(false)
 
   const normalizedQuery = query.trim().toLowerCase()
   const isSearching = normalizedQuery.length > 0
 
-  const visibleGroups = useMemo(() => {
-    if (!isSearching) return GROUPS
+  const searchResults = useMemo(() => {
+    if (!isSearching) return []
     return GROUPS.map((group) => ({
       ...group,
       sections: group.sections.filter((s) =>
@@ -635,6 +813,8 @@ export default function GuideSection() {
       ),
     })).filter((group) => group.sections.length > 0)
   }, [normalizedQuery, isSearching])
+
+  const activeGroup = GROUPS.find((g) => g.id === activeGroupId) || GROUPS[0]
 
   return (
     <>
@@ -647,23 +827,69 @@ export default function GuideSection() {
           onChange={(e) => setQuery(e.target.value)}
           aria-label="Search the guide"
         />
+        {!isSearching && !compact && (
+          <button
+            type="button"
+            className={`icon-btn${expanded ? ' active-toggle' : ''}`}
+            onClick={() => setExpanded((e) => !e)}
+            aria-label="Toggle guide menu"
+            aria-expanded={expanded}
+          >
+            <MenuIcon size={18} />
+          </button>
+        )}
       </div>
 
-      {isSearching && visibleGroups.length === 0 && (
-        <p className="empty-state">
-          Nothing matches "{query}" — try a different word, or clear the search to browse
-          everything.
-        </p>
-      )}
-
-      {visibleGroups.map((group) => (
-        <div key={group.label} className="guide-group">
-          <h2 className="guide-group-label">{group.label}</h2>
-          {group.sections.map((section) => (
-            <Section key={section.id} section={section} forceOpen={isSearching} />
+      {isSearching ? (
+        searchResults.length === 0 ? (
+          <p className="empty-state">
+            Nothing matches "{query}" — try a different word, or clear the search to browse
+            everything.
+          </p>
+        ) : (
+          searchResults.map((group) => (
+            <div key={group.id} className="guide-group">
+              <h2 className="guide-group-label">{group.label}</h2>
+              {group.sections.map((section) => (
+                <Topic key={section.id} section={section} forceOpen />
+              ))}
+            </div>
+          ))
+        )
+      ) : compact ? (
+        <>
+          <div className="guide-group-tabs">
+            {GROUPS.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                className={`guide-group-tab${group.id === activeGroup.id ? ' active' : ''}`}
+                onClick={() => setActiveGroupId(group.id)}
+              >
+                <group.Icon size={15} />
+                {group.label}
+              </button>
+            ))}
+          </div>
+          {activeGroup.sections.map((section) => (
+            <Topic key={section.id} section={section} />
           ))}
+        </>
+      ) : (
+        <div className={`settings-shell${expanded ? ' expanded' : ''}`}>
+          <SettingsNav
+            sections={GROUPS}
+            activeId={activeGroup.id}
+            onSelect={(id) => setActiveGroupId(id)}
+          />
+          <div className="settings-content">
+            <h2 className="settings-section-title">{activeGroup.label}</h2>
+            {activeGroup.sections.map((section) => (
+              <Topic key={section.id} section={section} />
+            ))}
+          </div>
         </div>
-      ))}
+      )}
     </>
   )
 }

@@ -284,6 +284,44 @@ export function ImportIcon({ size = 20, ...props }) {
   )
 }
 
+// ---------- Guide nav icons ----------
+// One glyph per top-level group in GuideSection.jsx's own rail — Getting
+// started/Stats/Your account reuse GroupsNavIcon/PieChartIcon/ProfileIcon
+// above (each already means the same thing elsewhere in the app), Sharing
+// & importing reuses ShareIcon, Group management reuses SettingsIcon (a
+// group's own settings, same glyph as the account Settings page's own
+// gear); Bills & splitting and Settling up are new.
+
+// A receipt's own jagged bottom edge is a more specific silhouette than a
+// generic document/list icon — reads as "an itemized bill" at a glance,
+// which is what this whole group of guide topics is actually about.
+export function ReceiptIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M5 3h14v17.5l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3V3z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// Two opposing arrows — money moving back and forth until it nets out,
+// rather than a checkmark (which would read as "done" more than "this is
+// what settling up means"). Distinct from SubscriptionIcon's own loop
+// (that one means "repeats automatically"; this means "balances out").
+export function SettleIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M4 8h13M13 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16H7M11 12l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // The standard warning triangle — Danger Zone is the one nav item that
 // needs to read as "different" at a glance even collapsed to icon-only,
 // same reasoning SignOutIcon gets its own warm-colored slot in the

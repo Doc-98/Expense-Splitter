@@ -794,10 +794,21 @@ Setting up a Subscription by hand, from Group Settings, is unaffected.)
 
 ## The in-app guide
 
-`/guide` (also reachable from Settings as "How to Use") is a
-searchable set of collapsible sections covering the whole app — worth
-keeping in sync as features land; it's one file, `src/pages/Guide.jsx`, each
-section self-contained.
+`/guide` (also reachable from Settings as "How to Use", both rendering the
+same `src/components/GuideSection.jsx`) is a searchable, topic-by-topic
+guide covering the whole app — worth keeping in sync as features land.
+Topics are grouped (Getting started, Bills & splitting, Settling up,
+Sharing & importing your data, Stats, Group management, Your account);
+browsing one group at a time uses the same `SettingsNav.jsx` rail the
+account and Group Settings pages already use on the standalone `/guide`
+page (room for a full second rail), and a horizontally scrollable row of
+chips instead when embedded in Settings (`compact` prop — a second full
+rail nested inside Settings' own measured out too cramped on a real
+phone). Typing a search query bypasses both and flattens every group's
+matching topics into one force-opened list, same as before either
+existed. Each topic is still its own self-contained `<details>` entry —
+keep new/changed ones short enough to stay skimmable; split a topic that's
+grown long into two rather than letting it become another wall of text.
 
 ## Recaps, PDFs, and CSV
 
