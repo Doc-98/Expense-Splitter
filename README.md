@@ -437,6 +437,19 @@ component self-contained. `"Check for updates"` calls
 `registration.update()` to force an on-demand check rather than waiting
 for the browser's own infrequent one.
 
+`workbox.clientsClaim: true` in the `VitePWA()` config is what makes
+"Reload to update" actually reload. `skipWaiting()` (sent as a
+`SKIP_WAITING` message when that button is clicked) only moves the new
+service worker into the active state — on its own it does *not* hand it
+control of tabs that are already open, so the browser never fires
+`controllerchange`, which is the event `useRegisterSW`'s built-in
+reload-after-update logic is waiting on. Without `clientsClaim`, clicking
+the button silently did nothing: the new worker activated in the
+background, but the open tab kept being served by the old one until
+someone closed and reopened it by hand. `clientsClaim` makes the
+newly-active worker claim already-open tabs too, which is what actually
+fires that event and lets the reload happen.
+
 `src/lib/appVersion.js` holds `APP_VERSION` and a short `WHATS_NEW` list —
 read by the version chip in `AppHeader.jsx` and by the Settings > Updates
 section. `APP_VERSION` ("1.\<PR number\>") is computed automatically, not

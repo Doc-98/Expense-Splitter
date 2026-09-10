@@ -41,6 +41,20 @@ export default defineConfig({
       // update had already silently applied before anyone looked.
       registerType: 'prompt',
       includeAssets: ['favicon.svg'],
+      workbox: {
+        // clientsClaim: without this, calling skipWaiting() (which is what
+        // "Reload to update" below does) only moves the new service worker
+        // into the active state — it does NOT hand it control of tabs that
+        // are already open. The browser only fires 'controllerchange' (what
+        // useRegisterSW's built-in reload-after-update is waiting on) once
+        // control actually changes hands, so without this, clicking
+        // "Reload to update" quietly did nothing: the new worker activated
+        // in the background, but the open tab kept being served by the old
+        // one until someone closed and reopened it by hand. clientsClaim
+        // makes the newly-active worker claim already-open tabs too, which
+        // is what actually fires that event and lets the reload happen.
+        clientsClaim: true,
+      },
       manifest: {
         name: 'Spesa - Expense Splitter',
         short_name: 'Spesa',
