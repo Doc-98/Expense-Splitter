@@ -1028,6 +1028,10 @@ input.item-editable-input, textarea.item-editable-input {
 .scan-strategy-note { text-align: center; margin-top: 6px; }
 
 /* ---------- Scan settings page ---------- */
+/* Now only used by ImportBankStatement.jsx's single standalone checkbox
+   ("double-check column detection with AI") — ScanSettingsSection.jsx's
+   own provider choice moved to the .provider-* rows below, which replaced
+   what used to be one .scan-option card per provider. */
 .scan-option {
   display: flex;
   align-items: flex-start;
@@ -1051,6 +1055,70 @@ input.item-editable-input, textarea.item-editable-input {
   gap: var(--space-sm);
 }
 .scan-option-detail input { width: 100%; }
+
+/* ---------- Scan settings: provider picker (expand-in-place list) ----------
+   Replaces the old radio-card-per-provider layout — the only place in the
+   app still using bare native radio buttons, and the only one keeping all
+   four providers' full descriptions (and fields, where relevant) expanded
+   at once regardless of which one is actually in use. Now: one compact
+   row per provider, and only the selected one expands to show its own
+   description and fields — the same "pick a method, see just its fields"
+   pattern Stripe/PayPal use for payment methods. Each row keeps a real
+   <input type="radio"> (see .provider-radio below), just visually hidden
+   the same way .switch above hides its own checkbox — so keyboard/screen-
+   reader users still get real radio-group behavior (arrow keys move both
+   focus and selection) rather than a reimplemented one. */
+.provider-list { margin-bottom: var(--space-sm); }
+.provider-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.provider-item.is-open { border-color: var(--accent); }
+.provider-head {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0;
+  font-size: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.provider-head:focus-within { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+.provider-radio { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.provider-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-tint);
+  color: var(--accent-dark);
+  flex: none;
+}
+.provider-head-text { flex: 1; min-width: 0; }
+.provider-head-text strong { display: block; font-size: 14px; }
+.provider-head-text span { display: block; font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+.provider-check { color: var(--accent); flex: none; }
+.provider-chevron { color: var(--ink-soft); flex: none; transition: transform 0.2s ease; }
+.provider-item.is-open .provider-chevron { transform: rotate(90deg); color: var(--accent); }
+/* The expand/collapse itself — a CSS-only grid-rows trick (0fr collapsed,
+   1fr open) rather than max-height, since it animates to the content's
+   real height exactly instead of a guessed cap. */
+.provider-body-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.22s ease; }
+.provider-item.is-open .provider-body-wrap { grid-template-rows: 1fr; }
+.provider-body-inner { overflow: hidden; }
+.provider-body { padding: 0 14px 14px; border-top: 1px solid var(--border); margin-top: 2px; padding-top: 10px; }
+.provider-body input[type='text'], .provider-body input[type='password'] { width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  .provider-body-wrap, .provider-chevron { transition: none; }
+}
 
 /* ---------- Group settings page (and, via the same shared class, Your
    Stats / Group Stats' own section headings) ---------- */
