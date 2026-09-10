@@ -583,8 +583,8 @@ export default function AccountStats() {
           title="Your stats"
           getText={() => formatAccountStatsRecap(recap, format)}
         />
-        <Link to="/stats/graphs" className="icon-btn" aria-label="See graphs" title="See graphs">
-          <LineChartIcon />
+        <Link to="/stats/graphs" className="icon-btn icon-btn-graphs" aria-label="See graphs" title="See graphs">
+          <LineChartIcon size={24} />
         </Link>
       </header>
 

@@ -313,8 +313,8 @@ export default function GroupStats() {
           title={`Stats — ${groupName || 'group'}`}
           getText={() => formatGroupStatsRecap(recap, format)}
         />
-        <Link to={`/groups/${groupId}/stats/graphs`} className="icon-btn" aria-label="See graphs" title="See graphs">
-          <LineChartIcon />
+        <Link to={`/groups/${groupId}/stats/graphs`} className="icon-btn icon-btn-graphs" aria-label="See graphs" title="See graphs">
+          <LineChartIcon size={24} />
         </Link>
       </header>
 

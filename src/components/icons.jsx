@@ -340,3 +340,67 @@ export function DangerIcon({ size = 20, ...props }) {
     </svg>
   )
 }
+
+// ---------- Scan settings: provider picker ----------
+// Three generic capability badges, not real provider logos — this app's
+// whole icon set is hand-drawn and logo-free (see the file's own header
+// comment), and imitating Google's or Anthropic's actual marks would both
+// break that convention and misrepresent an unofficial integration as an
+// official one. Gemini and Claude share CloudIcon below (both are "send
+// it to a cloud API") — only the delivery mechanism gets its own glyph,
+// not the specific service.
+
+export function DeviceIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <rect x="7" y="2" width="10" height="20" rx="2" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="18" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function CloudIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M6.5 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117 9.06 4.5 4.5 0 0116.5 18h-10z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+// Wi-Fi-style arcs — reads as "your own local network" more clearly than a
+// house would (this option means a computer on your LAN, not a place).
+export function NetworkIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M4 9a11 11 0 0116 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7.2 12.6a6.5 6.5 0 019.6 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="18" r="1.6" fill="currentColor" />
+    </svg>
+  )
+}
+
+// A bare chevron, no shaft — distinct from ArrowRightIcon's heavier full
+// arrow (that one means "submit/go"; this just marks something
+// expandable, flipping 90° open the same way any disclosure triangle
+// does). New rather than reusing ArrowRightIcon, since rotating a shafted
+// arrow 90° would leave a stray line pointing nowhere.
+export function ChevronIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function CheckIcon({ size = 20, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M5 13l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

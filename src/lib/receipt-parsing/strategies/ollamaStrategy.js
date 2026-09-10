@@ -41,6 +41,9 @@ async function callOllama(imageBase64, mediaType, baseUrl, model, categoryNames)
 export const ollamaStrategy = {
   id: 'ollama',
   label: 'Local Ollama (private, runs on your network)',
+  // See spatialStrategy.js for why these two exist alongside `label`.
+  shortLabel: 'Local Ollama',
+  badge: 'network',
   // Always "configured" — sensible defaults exist for both fields, nothing
   // strictly required before trying it, unlike the BYOK cloud strategies.
   isConfigured: () => true,

@@ -383,6 +383,16 @@ code {
 /* Marks an icon-button toggle as currently "on" — so far just Settings'
    own hamburger, tinted while its expanded nav is showing. */
 .icon-btn.active-toggle { background: var(--accent-light); color: var(--accent-dark); }
+/* The Graphs link (GroupStats.jsx/AccountStats.jsx headers): LineChartIcon
+   read as noticeably smaller than its neighbors even at the same nominal
+   20px size — a thin diagonal line covers a lot less of its 24x24 viewBox
+   than ShareIcon's three circles do of theirs, so the same box reads as
+   less "there." Sized up 20% (20px -> 24px) to compensate, with padding
+   trimmed from 6px to 4px so the button's own outer footprint stays 32x32
+   — identical to its sibling .icon-btns either side of it in the same
+   (align-items: baseline) header row, so it reads bigger without visibly
+   shifting or growing out of line with them. */
+.icon-btn.icon-btn-graphs { padding: 4px; }
 
 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft); margin-bottom: var(--space-sm); }
 
@@ -435,6 +445,34 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .input-submit-btn:active:not(:disabled) { transform: translateY(-50%) scale(0.9); }
 @media (prefers-reduced-motion: reduce) {
   .input-submit-btn, .form-submit-btn { transition: none; }
+}
+
+/* Same circular fading-arrow button as .input-submit-btn above, for a form
+   with more than one field to gate on — the add-item row (Item/Price/Qty)
+   has no single input to anchor an absolutely-positioned button inside,
+   so this sits as a normal flex sibling at the end of the row instead. */
+.row-submit-btn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transform: scale(0.8);
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.row-submit-btn:not(:disabled) { opacity: 1; transform: scale(1); }
+.row-submit-btn:disabled { pointer-events: none; }
+.row-submit-btn:active:not(:disabled) { transform: scale(0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .row-submit-btn { transition: none; }
 }
 
 /* ---------- Auth screen ---------- */
@@ -501,6 +539,11 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   font-weight: 500;
 }
 .card-list-item:hover { border-color: var(--accent); }
+/* Instant feedback the moment a press starts — whether it turns into a
+   plain tap or gets held long enough to trigger useLongPress.js's own
+   select-mode gesture, so there's never a dead stretch where nothing on
+   screen has reacted yet. */
+.card-list-item:active { border-color: var(--accent); background: var(--accent-light); }
 /* The ↑/↓-selected row (src/lib/useListKeyboardNav.js, shared by
    GroupView.jsx's bill list and Groups.jsx's group list) — same accent
    used for hover/focus elsewhere in the app, just on the whole row
@@ -998,6 +1041,7 @@ input.item-editable-input, textarea.item-editable-input {
 
 .add-item-form {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-bottom: var(--space-md);
 }
@@ -1006,13 +1050,44 @@ input.item-editable-input, textarea.item-editable-input {
 
 .scan-row { display: flex; flex-direction: column; margin-top: var(--space-sm); }
 .scan-buttons { display: flex; gap: 8px; }
-.scan-buttons .btn-secondary { flex: 1; }
+.scan-buttons .btn-secondary { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .scan-status { text-align: center; margin: 0; }
 
 .sample-link { display: block; text-align: center; margin: var(--space-xs) auto 0; }
-.scan-strategy-note { text-align: center; margin-top: 6px; }
+
+/* Which strategy a scan will actually use — a small chip rather than the
+   plain "Using: X — change" text line this used to be, and reusing the
+   same badge icon (device/cloud/network) ScanSettingsSection.jsx's own
+   provider rows use, so the two visually point at each other. */
+.scan-method-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface-tint);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 6px 6px 10px;
+  margin-top: 8px;
+}
+.scan-method-chip-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); font-weight: 500; }
+.scan-method-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--accent-dark);
+  flex: none;
+}
 
 /* ---------- Scan settings page ---------- */
+/* Now only used by ImportBankStatement.jsx's single standalone checkbox
+   ("double-check column detection with AI") — ScanSettingsSection.jsx's
+   own provider choice moved to the .provider-* rows below, which replaced
+   what used to be one .scan-option card per provider. */
 .scan-option {
   display: flex;
   align-items: flex-start;
@@ -1036,6 +1111,70 @@ input.item-editable-input, textarea.item-editable-input {
   gap: var(--space-sm);
 }
 .scan-option-detail input { width: 100%; }
+
+/* ---------- Scan settings: provider picker (expand-in-place list) ----------
+   Replaces the old radio-card-per-provider layout — the only place in the
+   app still using bare native radio buttons, and the only one keeping all
+   four providers' full descriptions (and fields, where relevant) expanded
+   at once regardless of which one is actually in use. Now: one compact
+   row per provider, and only the selected one expands to show its own
+   description and fields — the same "pick a method, see just its fields"
+   pattern Stripe/PayPal use for payment methods. Each row keeps a real
+   <input type="radio"> (see .provider-radio below), just visually hidden
+   the same way .switch above hides its own checkbox — so keyboard/screen-
+   reader users still get real radio-group behavior (arrow keys move both
+   focus and selection) rather than a reimplemented one. */
+.provider-list { margin-bottom: var(--space-sm); }
+.provider-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.provider-item.is-open { border-color: var(--accent); }
+.provider-head {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0;
+  font-size: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.provider-head:focus-within { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+.provider-radio { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.provider-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-tint);
+  color: var(--accent-dark);
+  flex: none;
+}
+.provider-head-text { flex: 1; min-width: 0; }
+.provider-head-text strong { display: block; font-size: 14px; }
+.provider-head-text span { display: block; font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+.provider-check { color: var(--accent); flex: none; }
+.provider-chevron { color: var(--ink-soft); flex: none; transition: transform 0.2s ease; }
+.provider-item.is-open .provider-chevron { transform: rotate(90deg); color: var(--accent); }
+/* The expand/collapse itself — a CSS-only grid-rows trick (0fr collapsed,
+   1fr open) rather than max-height, since it animates to the content's
+   real height exactly instead of a guessed cap. */
+.provider-body-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.22s ease; }
+.provider-item.is-open .provider-body-wrap { grid-template-rows: 1fr; }
+.provider-body-inner { overflow: hidden; }
+.provider-body { padding: 0 14px 14px; border-top: 1px solid var(--border); margin-top: 2px; padding-top: 10px; }
+.provider-body input[type='text'], .provider-body input[type='password'] { width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  .provider-body-wrap, .provider-chevron { transition: none; }
+}
 
 /* ---------- Group settings page (and, via the same shared class, Your
    Stats / Group Stats' own section headings) ---------- */
@@ -1251,16 +1390,6 @@ input.item-editable-input, textarea.item-editable-input {
    anchor would push the menu's right edge past the viewport instead of
    opening safely inward. */
 .share-menu-popover-right { left: auto; right: 0; }
-/* margin-bottom here, on top of .group-stats-preview-title's own
-   margin-top below, so the gap above that section's divider doesn't rely
-   solely on one side's margin — belt and suspenders against the divider
-   ever reading as too close to these buttons. */
-/* Centered per explicit request, same on every viewport for now — a
-   possible future refinement is splitting this per-breakpoint (flagged as
-   maybe reading worse on desktop), but that's deliberately not done here
-   until there's an actual verdict on how it looks. */
-.recap-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: var(--space-sm); margin-bottom: var(--space-lg); flex-wrap: wrap; }
-.recap-actions .share-button-wrap { margin-top: 0; }
 .share-status { font-size: 13px; }
 /* Icon mode's own copy-status message — a header packed tight with three
    icon buttons has no spare inline room for this without shoving Stats/

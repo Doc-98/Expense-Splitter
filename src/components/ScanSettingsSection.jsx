@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getReceiptSettings, setReceiptSettings } from '../lib/receiptSettings'
+import { DeviceIcon, CloudIcon, NetworkIcon, CheckIcon, ChevronIcon } from './icons'
 
 // The actual "how should receipts be scanned" UI/logic, pulled out of what
 // used to be ScanSettings.jsx's whole page so it can be reused two ways:
@@ -28,32 +29,38 @@ export default function ScanSettingsSection() {
 
       <h2 className="settings-section-title">How should receipts be read?</h2>
 
-      <label className="scan-option">
-        <input
-          type="radio"
-          name="strategy"
+      {/* One compact row per provider, only the selected one expanded — the
+          same "pick a method, see just its fields" pattern most modern
+          checkout flows use, rather than four always-expanded cards' worth
+          of description whether you use them or not. Each row still wraps
+          a real <input type="radio"> (visually hidden, same trick as the
+          dark-mode .switch), so keyboard/screen-reader users keep the
+          native radio-group behavior — arrow keys move both focus and
+          selection between rows — instead of a reimplemented one. */}
+      <div className="provider-list">
+        <ProviderRow
+          id="spatial"
+          name="Free OCR"
+          tagline="Default · on-device, no account needed"
+          badge="device"
           checked={settings.strategyId === 'spatial'}
-          onChange={() => update({ strategyId: 'spatial' })}
-        />
-        <div>
-          <strong>Free OCR (default)</strong>
+          onSelect={() => update({ strategyId: 'spatial' })}
+        >
           <p className="muted">
             Runs entirely on this device, no account or key needed. Works best on clearly-lit, roughly
             two-column receipts (item on the left, price on the right) — the same layout almost every
             receipt uses.
           </p>
-        </div>
-      </label>
+        </ProviderRow>
 
-      <label className="scan-option">
-        <input
-          type="radio"
-          name="strategy"
+        <ProviderRow
+          id="gemini"
+          name="Google Gemini"
+          tagline="Cloud · your API key"
+          badge="cloud"
           checked={settings.strategyId === 'gemini'}
-          onChange={() => update({ strategyId: 'gemini' })}
-        />
-        <div>
-          <strong>Google Gemini (your API key)</strong>
+          onSelect={() => update({ strategyId: 'gemini' })}
+        >
           <p className="muted">
             More accurate, handles messy or unusual receipts better. Needs a free API key from{' '}
             <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">
@@ -61,11 +68,6 @@ export default function ScanSettingsSection() {
             </a>
             . Free tier covers ordinary household use comfortably.
           </p>
-        </div>
-      </label>
-
-      {settings.strategyId === 'gemini' && (
-        <div className="scan-option-detail">
           <label>
             Gemini API key
             <input
@@ -88,18 +90,16 @@ export default function ScanSettingsSection() {
               placeholder="gemini-2.5-flash"
             />
           </label>
-        </div>
-      )}
+        </ProviderRow>
 
-      <label className="scan-option">
-        <input
-          type="radio"
-          name="strategy"
+        <ProviderRow
+          id="claude"
+          name="Anthropic Claude"
+          tagline="Cloud · your API key"
+          badge="cloud"
           checked={settings.strategyId === 'claude'}
-          onChange={() => update({ strategyId: 'claude' })}
-        />
-        <div>
-          <strong>Anthropic Claude (your API key)</strong>
+          onSelect={() => update({ strategyId: 'claude' })}
+        >
           <p className="muted">
             Same model this app's own scanning used to run on, now with your own key instead of a
             shared server one. Get a key at{' '}
@@ -108,11 +108,6 @@ export default function ScanSettingsSection() {
             </a>
             — this one isn't a free tier, receipt scans just cost well under a cent each.
           </p>
-        </div>
-      </label>
-
-      {settings.strategyId === 'claude' && (
-        <div className="scan-option-detail">
           <label>
             Claude API key
             <input
@@ -131,27 +126,20 @@ export default function ScanSettingsSection() {
               placeholder="claude-sonnet-5"
             />
           </label>
-        </div>
-      )}
+        </ProviderRow>
 
-      <label className="scan-option">
-        <input
-          type="radio"
-          name="strategy"
+        <ProviderRow
+          id="ollama"
+          name="Local Ollama"
+          tagline="Self-hosted, your own hardware"
+          badge="network"
           checked={settings.strategyId === 'ollama'}
-          onChange={() => update({ strategyId: 'ollama' })}
-        />
-        <div>
-          <strong>Local Ollama (private, your own hardware)</strong>
+          onSelect={() => update({ strategyId: 'ollama' })}
+        >
           <p className="muted">
             Runs on a computer on your own network — nothing about the receipt ever leaves your house.
             No cost, no account, but needs a decent computer and some setup.
           </p>
-        </div>
-      </label>
-
-      {settings.strategyId === 'ollama' && (
-        <div className="scan-option-detail">
           <p className="status-error">
             Important: Ollama blocks requests from other origins by default. On the machine running
             Ollama, set the environment variable <code>OLLAMA_ORIGINS</code> to include this app's
@@ -185,8 +173,8 @@ export default function ScanSettingsSection() {
             <code>qwen2.5vl</code> and <code>llama3.2-vision</code> are both solid choices — run{' '}
             <code>ollama pull qwen2.5vl</code> on that machine first if you haven't already.
           </p>
-        </div>
-      )}
+        </ProviderRow>
+      </div>
 
       <h2 className="settings-section-title">OCR language</h2>
       <p className="muted">
@@ -202,5 +190,37 @@ export default function ScanSettingsSection() {
 
       {saved && <p className="status-success">Saved</p>}
     </>
+  )
+}
+
+const BADGE_ICONS = { device: DeviceIcon, cloud: CloudIcon, network: NetworkIcon }
+
+// A single provider row: collapsed to a badge + name + tagline, expanding
+// in place to `children` (its full description and fields) once selected.
+// checked/onSelect drive a real <input type="radio"> rather than a plain
+// button, so the row keeps native radio-group semantics even though its
+// dot is visually hidden — see the .provider-radio comment in styles.css.
+function ProviderRow({ id, name, tagline, badge, checked, onSelect, children }) {
+  const Badge = BADGE_ICONS[badge]
+  return (
+    <div id={`scan-provider-${id}`} className={`provider-item${checked ? ' is-open' : ''}`}>
+      <label className="provider-head">
+        <input type="radio" name="strategy" className="provider-radio" checked={checked} onChange={onSelect} />
+        <span className="provider-badge">
+          <Badge size={18} />
+        </span>
+        <span className="provider-head-text">
+          <strong>{name}</strong>
+          <span>{tagline}</span>
+        </span>
+        {checked && <CheckIcon size={18} className="provider-check" />}
+        <ChevronIcon size={18} className="provider-chevron" />
+      </label>
+      <div className="provider-body-wrap">
+        <div className="provider-body-inner">
+          <div className="provider-body">{children}</div>
+        </div>
+      </div>
+    </div>
   )
 }

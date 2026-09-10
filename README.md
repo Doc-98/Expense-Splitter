@@ -437,9 +437,31 @@ component self-contained. `"Check for updates"` calls
 `registration.update()` to force an on-demand check rather than waiting
 for the browser's own infrequent one.
 
+`workbox.clientsClaim: true` in the `VitePWA()` config is what makes
+"Reload to update" actually reload. `skipWaiting()` (sent as a
+`SKIP_WAITING` message when that button is clicked) only moves the new
+service worker into the active state — on its own it does *not* hand it
+control of tabs that are already open, so the browser never fires
+`controllerchange`, which is the event `useRegisterSW`'s built-in
+reload-after-update logic is waiting on. Without `clientsClaim`, clicking
+the button silently did nothing: the new worker activated in the
+background, but the open tab kept being served by the old one until
+someone closed and reopened it by hand. `clientsClaim` makes the
+newly-active worker claim already-open tabs too, which is what actually
+fires that event and lets the reload happen.
+
 `src/lib/appVersion.js` holds `APP_VERSION` and a short `WHATS_NEW` list —
-bump both by hand with each PR (same convention as the version chip in
-`AppHeader.jsx`, which now imports from here too).
+read by the version chip in `AppHeader.jsx` and by the Settings > Updates
+section. `APP_VERSION` ("1.\<PR number\>") is computed automatically, not
+hand-maintained: `vite.config.js` shells out to `git log` at build time and
+walks recent commit subjects (newest first) via
+`src/lib/versionFromCommit.js` until it finds one with the " (#123)" suffix
+GitHub appends to every squash-merge, then injects the result as
+`import.meta.env.VITE_APP_VERSION`. That keeps the number mechanically tied
+to what actually merged, instead of relying on whoever opens the next PR to
+remember to bump it by hand. `WHATS_NEW` stays hand-written — summarizing
+"what a human would care about" isn't something a commit subject alone can
+do — so replace that list with each PR that ships something user-visible.
 
 ## Add to home screen
 
@@ -667,6 +689,17 @@ preference is on.
 Every bill has a **⋮** menu (`src/components/BillActionsMenu.jsx`) with
 **Select**, **Share**, and **Delete**. With one or more bills selected, a bar
 above the list adds **Share** (one combined recap) and **Delete selected**.
+
+Press and hold a bill row for a faster way into select mode with that row
+already checked — `src/lib/useLongPress.js` is a small, reusable Pointer
+Events-based hook (covers touch/mouse/pen with one set of listeners; not
+this app's usual separate touchstart+mousedown pair, safe here specifically
+because nothing else on the row listens for those legacy events too). It
+swallows the click that still follows the eventual pointerup by calling
+`event.preventDefault()` from its own `onClick` — since `Link`'s own click
+handler only navigates `if (!event.defaultPrevented)`, that's enough to
+stop a long press from *also* navigating into the bill, no extra
+navigation-blocking logic needed on `GroupView.jsx`'s side.
 
 For wiping a group's *entire* bill history in one shot, Group Settings'
 **Danger Zone → Delete all bills** is the one bill-deleting action that's

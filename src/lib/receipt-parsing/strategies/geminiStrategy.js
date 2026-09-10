@@ -52,6 +52,9 @@ async function callGemini(imageBase64, mediaType, apiKey, model, categoryNames) 
 export const geminiStrategy = {
   id: 'gemini',
   label: 'Google Gemini (your API key)',
+  // See spatialStrategy.js for why these two exist alongside `label`.
+  shortLabel: 'Google Gemini',
+  badge: 'cloud',
   isConfigured: () => Boolean(getReceiptSettings().geminiApiKey),
   parse: (imageBase64, mediaType, onProgress, categoryNames = []) => {
     const { geminiApiKey, geminiModel } = getReceiptSettings()

@@ -5,7 +5,7 @@ import BackButton from '../components/BackButton'
 // A thin page wrapper around ScanSettingsSection — the actual UI/logic
 // lives there now, shared with its collapsed form on the Settings page.
 // This route stays around for the existing deep links straight here (see
-// ScanReceiptButton.jsx's "change" link and CategorizeBills.jsx).
+// ScanReceiptButton.jsx's scan-method chip and CategorizeBills.jsx).
 export default function ScanSettings() {
   const navigate = useNavigate()
 
