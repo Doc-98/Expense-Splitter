@@ -383,6 +383,16 @@ code {
 /* Marks an icon-button toggle as currently "on" — so far just Settings'
    own hamburger, tinted while its expanded nav is showing. */
 .icon-btn.active-toggle { background: var(--accent-light); color: var(--accent-dark); }
+/* The Graphs link (GroupStats.jsx/AccountStats.jsx headers): LineChartIcon
+   read as noticeably smaller than its neighbors even at the same nominal
+   20px size — a thin diagonal line covers a lot less of its 24x24 viewBox
+   than ShareIcon's three circles do of theirs, so the same box reads as
+   less "there." Sized up 20% (20px -> 24px) to compensate, with padding
+   trimmed from 6px to 4px so the button's own outer footprint stays 32x32
+   — identical to its sibling .icon-btns either side of it in the same
+   (align-items: baseline) header row, so it reads bigger without visibly
+   shifting or growing out of line with them. */
+.icon-btn.icon-btn-graphs { padding: 4px; }
 
 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft); margin-bottom: var(--space-sm); }
 
