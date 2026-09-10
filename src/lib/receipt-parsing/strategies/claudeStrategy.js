@@ -62,6 +62,9 @@ async function callClaude(imageBase64, mediaType, apiKey, model, categoryNames) 
 export const claudeStrategy = {
   id: 'claude',
   label: 'Anthropic Claude (your API key)',
+  // See spatialStrategy.js for why these two exist alongside `label`.
+  shortLabel: 'Anthropic Claude',
+  badge: 'cloud',
   isConfigured: () => Boolean(getReceiptSettings().claudeApiKey),
   parse: (imageBase64, mediaType, onProgress, categoryNames = []) => {
     const { claudeApiKey, claudeModel } = getReceiptSettings()

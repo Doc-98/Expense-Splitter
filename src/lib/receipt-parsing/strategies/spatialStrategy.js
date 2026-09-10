@@ -64,6 +64,15 @@ export async function runSpatialOCR(imageBase64, mediaType, language, onProgress
 export const spatialStrategy = {
   id: 'spatial',
   label: 'Free OCR (runs on this device, no account needed)',
+  // Short form for compact UI (the scan-method chip on a bill) — the full
+  // label above stays as-is for prose contexts (ImportBankStatement.jsx's
+  // sentences, Scan Settings' own row), where the parenthetical is exactly
+  // what makes those readable on their own.
+  shortLabel: 'Free OCR',
+  // Which badge icon represents this strategy's category — matches the
+  // provider picker in ScanSettingsSection.jsx (device/cloud/network),
+  // reused here so the two stay visually in sync.
+  badge: 'device',
   // Always available — this is the guaranteed fallback, nothing to configure.
   isConfigured: () => true,
   // categoryNames is deliberately unused — this reads pixels off the photo,

@@ -447,6 +447,34 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   .input-submit-btn, .form-submit-btn { transition: none; }
 }
 
+/* Same circular fading-arrow button as .input-submit-btn above, for a form
+   with more than one field to gate on — the add-item row (Item/Price/Qty)
+   has no single input to anchor an absolutely-positioned button inside,
+   so this sits as a normal flex sibling at the end of the row instead. */
+.row-submit-btn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transform: scale(0.8);
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.row-submit-btn:not(:disabled) { opacity: 1; transform: scale(1); }
+.row-submit-btn:disabled { pointer-events: none; }
+.row-submit-btn:active:not(:disabled) { transform: scale(0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .row-submit-btn { transition: none; }
+}
+
 /* ---------- Auth screen ---------- */
 .auth-screen {
   min-height: 100vh;
@@ -1013,6 +1041,7 @@ input.item-editable-input, textarea.item-editable-input {
 
 .add-item-form {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-bottom: var(--space-md);
 }
@@ -1021,11 +1050,38 @@ input.item-editable-input, textarea.item-editable-input {
 
 .scan-row { display: flex; flex-direction: column; margin-top: var(--space-sm); }
 .scan-buttons { display: flex; gap: 8px; }
-.scan-buttons .btn-secondary { flex: 1; }
+.scan-buttons .btn-secondary { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .scan-status { text-align: center; margin: 0; }
 
 .sample-link { display: block; text-align: center; margin: var(--space-xs) auto 0; }
-.scan-strategy-note { text-align: center; margin-top: 6px; }
+
+/* Which strategy a scan will actually use — a small chip rather than the
+   plain "Using: X — change" text line this used to be, and reusing the
+   same badge icon (device/cloud/network) ScanSettingsSection.jsx's own
+   provider rows use, so the two visually point at each other. */
+.scan-method-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface-tint);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 6px 6px 10px;
+  margin-top: 8px;
+}
+.scan-method-chip-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); font-weight: 500; }
+.scan-method-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--accent-dark);
+  flex: none;
+}
 
 /* ---------- Scan settings page ---------- */
 /* Now only used by ImportBankStatement.jsx's single standalone checkbox
@@ -1334,16 +1390,6 @@ input.item-editable-input, textarea.item-editable-input {
    anchor would push the menu's right edge past the viewport instead of
    opening safely inward. */
 .share-menu-popover-right { left: auto; right: 0; }
-/* margin-bottom here, on top of .group-stats-preview-title's own
-   margin-top below, so the gap above that section's divider doesn't rely
-   solely on one side's margin — belt and suspenders against the divider
-   ever reading as too close to these buttons. */
-/* Centered per explicit request, same on every viewport for now — a
-   possible future refinement is splitting this per-breakpoint (flagged as
-   maybe reading worse on desktop), but that's deliberately not done here
-   until there's an actual verdict on how it looks. */
-.recap-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: var(--space-sm); margin-bottom: var(--space-lg); flex-wrap: wrap; }
-.recap-actions .share-button-wrap { margin-top: 0; }
 .share-status { font-size: 13px; }
 /* Icon mode's own copy-status message — a header packed tight with three
    icon buttons has no spare inline room for this without shoving Stats/

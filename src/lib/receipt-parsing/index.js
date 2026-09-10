@@ -23,6 +23,10 @@ export async function parseReceipt(imageBase64, mediaType, onProgress, categoryN
   return { items, strategyLabel: strategy.label }
 }
 
-export function currentStrategyLabel() {
-  return resolveStrategy().label
+// Just the bits ScanReceiptButton.jsx's compact scan-method chip needs —
+// not the whole strategy object, which also carries `parse`/`isConfigured`
+// the caller has no use for.
+export function currentStrategySummary() {
+  const { shortLabel, badge } = resolveStrategy()
+  return { shortLabel, badge }
 }

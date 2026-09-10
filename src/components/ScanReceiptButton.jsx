@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { parseReceipt, currentStrategyLabel } from '../lib/receipt-parsing'
+import { parseReceipt, currentStrategySummary } from '../lib/receipt-parsing'
+import { ScanIcon, ImportIcon, DeviceIcon, CloudIcon, NetworkIcon, SettingsIcon } from './icons'
+
+const BADGE_ICONS = { device: DeviceIcon, cloud: CloudIcon, network: NetworkIcon }
 
 // A receipt could plausibly be more than a fresh photo — a PDF emailed by
 // a store, a text/HTML export saved from a confirmation email. "Choose
@@ -14,6 +17,8 @@ export default function ScanReceiptButton({ scanning, setScanning, onScanned, on
   const cameraInputRef = useRef(null)
   const browseInputRef = useRef(null)
   const [progress, setProgress] = useState(null)
+  const { shortLabel, badge } = currentStrategySummary()
+  const BadgeIcon = BADGE_ICONS[badge]
 
   async function handleFile(e) {
     const file = e.target.files?.[0]
@@ -50,9 +55,11 @@ export default function ScanReceiptButton({ scanning, setScanning, onScanned, on
       ) : (
         <div className="scan-buttons">
           <button type="button" className="btn-secondary" onClick={() => cameraInputRef.current?.click()}>
+            <ScanIcon size={18} />
             Take photo
           </button>
           <button type="button" className="btn-secondary" onClick={() => browseInputRef.current?.click()}>
+            <ImportIcon size={18} />
             Choose file
           </button>
         </div>
@@ -77,9 +84,22 @@ export default function ScanReceiptButton({ scanning, setScanning, onScanned, on
         onChange={handleFile}
         style={{ display: 'none' }}
       />
-      <p className="scan-strategy-note muted">
-        Using: {currentStrategyLabel()} — <Link to="/scan-settings">change</Link>
-      </p>
+      {/* Badge matches the same icon this strategy gets on its own row in
+          ScanSettingsSection.jsx's provider picker — so what's shown here
+          visually points back to where it's actually configured, rather
+          than a bare "change" text link next to a description that used
+          to spell out the whole Scan Settings blurb inline. */}
+      <div className="scan-method-chip">
+        <span className="scan-method-chip-left">
+          <span className="scan-method-badge">
+            <BadgeIcon size={15} />
+          </span>
+          {shortLabel}
+        </span>
+        <Link to="/scan-settings" className="icon-btn" aria-label="Change scan method" title="Change scan method">
+          <SettingsIcon size={18} />
+        </Link>
+      </div>
     </div>
   )
 }

@@ -14,6 +14,7 @@ import ShareButton from '../components/ShareButton'
 import MultiPayerModal from '../components/MultiPayerModal'
 import { PrintableBillRecap } from '../components/PrintableRecap'
 import BackButton from '../components/BackButton'
+import { ArrowRightIcon } from '../components/icons'
 import { useCurrency } from '../context/CurrencyContext'
 
 export default function BillView() {
@@ -375,6 +376,18 @@ export default function BillView() {
       <header className="page-header">
         <BackButton to={`/groups/${groupId}`} />
         <h1>{bill?.title}</h1>
+        {/* Icon mode, same position/pattern as Group View/Group Stats/Your
+            Stats' own header Share button — was a centered text button
+            further down the page, next to the scan section, which put it
+            nowhere near where every other Share control on the app lives. */}
+        <ShareButton
+          icon
+          menuAlign="right"
+          label="Share recap"
+          title={bill?.title}
+          getText={() => formatBillRecap({ ...bill, payers: billPayers }, items, allMembers, format)}
+          onExportCsv={exportCsv}
+        />
       </header>
 
       <div className="bill-note-row">
@@ -531,8 +544,16 @@ export default function BillView() {
           onChange={(e) => setNewItem((v) => ({ ...v, quantity: e.target.value }))}
           onKeyDown={handleQtyKeyDown}
         />
-        <button type="submit" className="btn-primary">
-          Add
+        {/* Same fading arrow-submit button Create group/Add bill/New
+            category use, not the plain "Add" text button this used to be
+            — reusing that pattern here even though it's a flex sibling
+            rather than living inside a single input the way it does
+            there (this form has three fields, so the input-with-submit
+            approach doesn't have one input to anchor to). Gated the same
+            way addItem() itself is: a name is required, price/quantity
+            fall back gracefully if left blank. */}
+        <button type="submit" className="row-submit-btn" disabled={!newItem.name.trim()} aria-label="Add item">
+          <ArrowRightIcon size={16} />
         </button>
       </form>
 
@@ -548,14 +569,6 @@ export default function BillView() {
       </button>
       {scanError && <p className="status-error">{scanError}</p>}
 
-      <div className="recap-actions">
-        <ShareButton
-          label="Share recap"
-          title={bill?.title}
-          getText={() => formatBillRecap({ ...bill, payers: billPayers }, items, allMembers, format)}
-          onExportCsv={exportCsv}
-        />
-      </div>
       <PrintableBillRecap bill={{ ...bill, payers: billPayers }} items={items} members={allMembers} />
 
       <button type="button" className="btn-primary confirm-btn" onClick={() => navigate(`/groups/${groupId}`)}>
