@@ -1,9 +1,33 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+import { findLatestVersion } from './src/lib/versionFromCommit.js'
+
+// The app's version number is derived from git, not hand-maintained: every
+// PR merged into this repo is squash-merged, and GitHub always appends
+// " (#123)" to a squash-merge's own commit subject, so the most recent
+// commit already names its own PR number. Walking recent subjects (newest
+// first) until one has a PR number means the version can never drift from
+// what's actually shipped — see src/lib/versionFromCommit.js for the actual
+// extraction logic (kept there, pure and unit-tested, independent of git).
+// Falls back to 'dev' for a shallow checkout or a repo with no matching
+// history (e.g. a fresh clone with no git dir at all).
+function readAppVersion() {
+  try {
+    const log = execSync('git log --pretty=%s -50', { encoding: 'utf-8' })
+    const subjects = log.split('\n').filter(Boolean)
+    return findLatestVersion(subjects) || 'dev'
+  } catch {
+    return 'dev'
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(readAppVersion()),
+  },
   plugins: [
     react(),
     VitePWA({

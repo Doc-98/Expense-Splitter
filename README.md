@@ -438,8 +438,17 @@ component self-contained. `"Check for updates"` calls
 for the browser's own infrequent one.
 
 `src/lib/appVersion.js` holds `APP_VERSION` and a short `WHATS_NEW` list —
-bump both by hand with each PR (same convention as the version chip in
-`AppHeader.jsx`, which now imports from here too).
+read by the version chip in `AppHeader.jsx` and by the Settings > Updates
+section. `APP_VERSION` ("1.\<PR number\>") is computed automatically, not
+hand-maintained: `vite.config.js` shells out to `git log` at build time and
+walks recent commit subjects (newest first) via
+`src/lib/versionFromCommit.js` until it finds one with the " (#123)" suffix
+GitHub appends to every squash-merge, then injects the result as
+`import.meta.env.VITE_APP_VERSION`. That keeps the number mechanically tied
+to what actually merged, instead of relying on whoever opens the next PR to
+remember to bump it by hand. `WHATS_NEW` stays hand-written — summarizing
+"what a human would care about" isn't something a commit subject alone can
+do — so replace that list with each PR that ships something user-visible.
 
 ## Add to home screen
 
